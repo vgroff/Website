@@ -1,0 +1,4 @@
+m1*u1+m2*u2 = m1*v1+ m2*v2
+(m1u1+m2u2-m2v2)/m1
+
+bounciness = v2 - v1 / u1-u2
