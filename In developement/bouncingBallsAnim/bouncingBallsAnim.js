@@ -296,20 +296,20 @@ Spring.prototype.action = function() {
 
 function createPendulum(x, y, mass, velocity, balls, springs) {
 	var ball = new Ball(x, y, mass, velocity, 0, {"bounciness":0.95});
-	var spring = new Spring( ball, [x, offset], 500, y-2*g, 80, "#000000");
+	var spring = new Spring( ball, [x, offset], 500, y-2*g, 80, "#000000", "both");
 	balls.push(ball);
 	springs.push(spring);
 }
 
 function createMassSpring(x, y, velocity, radius, mass, balls, springs) {
 	var ball = new Ball(x, y, 1, 0, velocity, {});
-	var spring = new Spring( ball, [x, offset], 1, y-1000*g, 0.2, undefined);
+	var spring = new Spring( ball, [x, offset], 1, y-1000*g, 0.2, undefined, "both");
 	balls.push(ball);
 	springs.push(spring);	
 }
 
 function createString(joint1, ball2, balls, springs) {
-	var regularity = 4;
+	var regularity = 3;
 	var numberOfJoints = Math.floor(( distanceTo(joint1, ball2.getPos()) - 2*ball2.radius)/regularity);
 	var direction = directionTo(joint1, ball2.getPos());
 	var jointNumber = 0;
@@ -320,7 +320,7 @@ function createString(joint1, ball2, balls, springs) {
 	var ballMass = 0.1;
 	var springConst = 100;
 	var dampening = 5;
-	var friction = 0.00002;
+	var friction = 0.0000002;
 	var radius = 1;
 	var ball = new Ball(x, y, ballMass, 0, 0, {"radius":radius, "colour":"#000000", "friction":friction});
 	var spring = new Spring( joint1, ball, springConst, distanceTo(joint1, ball.getPos()), 10, "#000000", "both");
@@ -444,16 +444,17 @@ var containers = [ {"X":[offset, canvas.width-offset], "Y":[offset, canvas.heigh
 function exampleScenario() {
 	newtonsBalls();
 	createMassSpring(550, 250, 1.5, 20,1, balls, springs);
-	randomBalls(offset, canvas.width-offset, canvas.height-offset-30, canvas.height-offset, 0.05, -2.5, 10, 1,10, {}, balls);
+	randomBalls(offset, canvas.width-offset, canvas.height-offset-30, canvas.height-offset, 0, -2, 10, 1,10, {}, balls);
+	balls.push(new Ball(canvas.width/2, canvas.height-offset-50, 16, 0, -4, {"radius":40, "colour":"#AA00FF"}));
 }
 
 function scenario2() {
-	balls.push(new Ball(offset+200, offset+200, 1, 0, 0, {}) );
+	balls.push(new Ball(offset+200, offset+200, 1, 0, 0, {friction:0.1}) );
 	createString([offset+200, offset], balls[balls.length-1], balls, springs);
 }
 
-//exampleScenario();
-scenario2();
+exampleScenario();
+//scenario2();
 
 //balls.push(new Ball(100, 100, 1, 0, 0, {}));
 //~ springs.push(new Spring(balls[balls.length-1], balls[balls.length-2], 0.3, 250, 0, undefined));
@@ -560,7 +561,7 @@ $("#animCanvas").on('mousedown', function (evt) {
 			//console.log(evt.pageX);
 			if (first) {
 				if (ballClicked != undefined) {
-					var k = 5;
+					var k = 4*ballClicked.mass;
 					var dampening = 0;
 					springs.push(new Spring(currentMousePos, ballClicked, k, 0, dampening, undefined, "both"));
 					ballClicked.setProperties({friction:0.1});
