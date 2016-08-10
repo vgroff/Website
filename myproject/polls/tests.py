@@ -14,35 +14,37 @@ from .models import Question
 
 class QuestionMethodTests(TestCase):
 
-    def testWasPublishedRecentlyWithFutureQuestion(self):
+    def testwas_published_recentlyWithFutureQuestion(self):
         """
         test if was_published_recently returns false for questions published in the future
         """
         time = timezone.now() + datetime.timedelta(days=30)
         future_question = Question(pub_date=time)
-        self.assertEqual(future_question.wasPublishedRecently(), False)
+        self.assertEqual(future_question.was_published_recently(), False)
 
-    def testWasPublishedRecentlyWithRecentQuestion(self):
+    def testwas_published_recentlyWithRecentQuestion(self):
         """
         test if was_published_recently returns false for questions published in the future
         """
         time = timezone.now() - datetime.timedelta(hours=3)
         future_question = Question(pub_date=time)
-        self.assertEqual(future_question.wasPublishedRecently(), True)
+        self.assertEqual(future_question.was_published_recently(), True)
 
-    def testWasPublishedRecentlyWithOldQuestion(self):
+    def testwas_published_recentlyWithOldQuestion(self):
         """
         test if was_published_recently returns false for questions published in the future
         """
         time = timezone.now() - datetime.timedelta(days=30)
         future_question = Question(pub_date=time)
-        self.assertEqual(future_question.wasPublishedRecently(), False)
+        self.assertEqual(future_question.was_published_recently(), False)
 
 
 
-def create_question(question_text, days):
+def create_question_with_choice(question_text, days):
     time = timezone.now() + datetime.timedelta(days=days)
-    return Question.objects.create(question_text=question_text, pub_date=time)
+    question = Question.objects.create(question_text=question_text, pub_date=time)
+    question.choice_set.create(choice_text="default", votes=0)
+    return question
 
 class QuestionViewTests(TestCase):
 
@@ -53,20 +55,28 @@ class QuestionViewTests(TestCase):
         self.assertQuerysetEqual(response.context["latest_question_list"], [])
 
     def testIndexViewWithAPastQuestion(self):
-        create_question(question_text="Past question", days=-30)
+        create_question_with_choice(question_text="Past question", days=-30)
         response = self.client.get(reverse('polls:index'))
         self.assertQuerysetEqual( response.context['latest_question_list'], ['<Question: Past question>'])    
 
     def testIndexWithAFutureQuestion(self):
-        create_question(question_text="Future question", days=30)
+        create_question_with_choice(question_text="Future question", days=30)
         response = self.client.get(reverse('polls:index'))
         self.assertQuerysetEqual( response.context['latest_question_list'], [])         
+        
+    def testIndexViewWithAQuestionWithNoChoices(self):
+		question = create_question_with_choice(question_text="Past question", days = -20)
+		for choice in question.choice_set.all():
+			choice.delete()
+		response = self.client.get(reverse('polls:index'))
+		self.assertQuerysetEqual( response.context['latest_question_list'], []) 
+
        
     def testIndexViewWithTwoPastQuestions(self): 
-        create_question(question_text="Past question", days=-20)
-        create_question(question_text="Past question2", days=-30)
+        create_question_with_choice(question_text="Past question", days=-20)
+        create_question_with_choice(question_text="Past question2", days=-30)
         response = self.client.get(reverse('polls:index'))
         self.assertQuerysetEqual( response.context['latest_question_list'], ['<Question: Past question>', '<Question: Past question2>']) 
-
+        
 
 

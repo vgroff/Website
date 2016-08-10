@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block css %}
+	<link rel="stylesheet" type="text/css" href=" {% static 'home/style.css' %} " />
+{% endblock %}
+
+{% block content %}
+	<h1> Welcome </h1>
+	</br>
+	<p> 
+		Welcome to my website, built using Django, jQuery and HTMl5 Boilerplate. 
+	</p>
+	<p> 
+		I built this website with the hope of collating some of the projects I work on, as well as to learn about Web dev.
+	</p>
+	<p> 
+		You can find the various projects in the nav bar on the left.
+	</p>
+	</br>
+	<p> 
+		Below is an example of one, a physics engine I've built in Javascript. 
+		At the moment, there are particles that rebound according to the laws of momentum and springs that work according to Hooke's Law.
+		The simulation below is just an example, with a Newton cradle (including energy loss), a damped spring, and some perfectly elastic particles at the bottom.
+	</p>
+	</br>
+	<p>
+		It's also interactive. 
+	</p>
+	<p>
+		<b><em>Click a particle to "kick" it</em></b> or <b><em>click and drag to pull it somewhere.</em></b>
+	</p>
+	<p>
+		The damped spring only takes so much tension: if you pull it too hard it'll break. The cradle springs however, will hardly extend at all and won't break.
+	</p>
+	<canvas id="animCanvas" class="physicsCanvas"></canvas>
+{% endblock %}
+
+{% block js %}
+	<script src="{% static 'home/bouncingBallsAnim.js' %}"></script>
+{% endblock %}

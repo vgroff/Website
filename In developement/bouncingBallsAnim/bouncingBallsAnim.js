@@ -1,31 +1,28 @@
+
 /////////////////////////////////////
 // NEEEEEEEEEEEEEDS COOMMEEENTING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ///////////////////////////////////////////////
 ////AND MAKE MORE CONSISTENT!!!!
+
 // MAKE MORE EFFICIENT (TREE?)// divide into quarters with overlapping bits. count primary and secondary(in overlap) balls inside to be checked for collisions 
 // only do if too many balls
-// rethink order of gravity and movement bit again, should gravity be after???!!!!!
-// change vars into dicts
-// custom sides
-// impulse kick with click
-// live drag and drop
+// custom sides	- link container and ball limits
 // UI
 // custom structs e.g. strings/pendulums ect...
-// draw outer edge
 // have a graphing thing
+// look at fixing string via having a function that makes the natural lengths the equilibrium ones (i.e. call it after a bit as a setTimeout and just pass the right objects through) (DOES THIS EVEN HELP/WORK?)
 
-// Have a contructor function for ball that takes a dict and sets what needs to be (or in the constructor maybe)
 // change ball1 ball2 in spring to point1 point 2
-// one way springs +drag!!
 // have a restart animation butoon
 // change mouse cursor
 // better way of referencing springs for click and drag (save the index)
-// smaller balls
-
+// random colours if none given
+// improve click n drag
 // overlap off the top if negative!!!
-// fix creat string for egenral vector or ball
-// do a properties thing for springs too
-// ball on end of strig needs friction
+
+// altering springs when iterating over the list, bad idea. save a list to be popped instead
+// reduce dampening on string to have it behave more like a string
+// have taxtbox to change graph live
 
 var gravity = true;
 var g = 0.045;
@@ -130,11 +127,10 @@ Ball.prototype.setProperties = function(properties) {
 
 Ball.prototype.move = function() {
 	this.i += 1;	
-	if ( (gravity)) {
-		this.speedy += g;
-	}
+
 	this.x = this.x + this.speedx;
     this.y = this.y + this.speedy;
+	
     if ( (Math.abs(this.speedx) > 0) || (Math.abs(this.speedy) > 0) ) {
 		// Check for collision with sides
 		var collision = false;
@@ -171,6 +167,9 @@ Ball.prototype.move = function() {
 
 		this.velocityChange(this.friction*modulus([this.speedx, this.speedy]), directionTo([this.speedx, this.speedy], [0,0])); 
     }
+    if ( (gravity)) {
+		this.speedy += g;
+	}
 };
 
 Ball.prototype.velocityChange = function(modulus, direction) {
@@ -251,15 +250,14 @@ function ballCollision(ball1, ball2) {
 /////////////////// SPRING FUNCTIONS /////////////////////////
 //////////////////////////////////////////////////////////////
 
-function Spring(ball1, ball2, k, length, dampening, coloured, direction) {
+function Spring(ball1, ball2, k, length, properties) { //dampening, coloured, direction) {
 	this.ball1 = ball1;
 	this.ball2 = ball2;
 	this.k = k/1000;
 	this.length = length;
 	this.extension = 0;
-	this.dampening = dampening/200;
-	this.coloured = coloured;
-	this.direction = direction;
+	this.properties = {};
+	this.setProperties(properties);
 }
 
 Spring.prototype.action = function() {
@@ -287,7 +285,52 @@ Spring.prototype.action = function() {
 			this.ball2.velocityChange(this.dampening*dotProduct([this.ball2.speedx, this.ball2.speedy], directionTo(vector1, vector)), directionTo(vector, vector1));
 		}
 	}
+	//console.log(this.extension);
+	if (this.failPoint) {
+	    if (this.extension	>= this.failPoint) {
+			let index = springs.indexOf(this);
+			console.log(index);
+			if (index !== -1) {
+				springs.splice(index, 1);
+			}
+		}
+	}
 }
+
+Spring.prototype.setProperties = function(properties) {
+	if ("dampening" in properties) {
+		this.dampening = properties["dampening"]/200;
+		this.properties["dampening"] = this.dampening;
+	}
+	else if (!("dampening" in this.properties)) {
+		this.dampening = 0;
+		this.properties["dampening"] = this.dampening;
+	}
+	if ("colour" in properties) {
+		this.coloured = properties["coloured"];
+		this.properties["coloured"] = this.coloured;
+	}
+	else if (!("colour" in this.properties)){
+		this.coloured = undefined;
+		this.properties["coloured"] = this.coloured;
+	}
+	if ("direction" in properties) { 
+		this.direction = properties["direction"];
+		this.properties["direction"] = this.direction;
+	}
+	else if (!("direction" in this.properties)) {
+		this.direction = "both";
+		this.properties["direction"] = this.direction;
+	}
+	if ("fail point" in properties) { 
+		this.failPoint = properties["fail point"];
+		this.properties["fail point"] = this.failPoint;
+	}
+	else if (!("fail point" in this.properties)) {
+		this.failPoint = undefined;
+		this.properties["fail point"] = this.failPoint;
+	}
+};
 
 
 //////////////////////////////////////////////////////////////
@@ -296,20 +339,20 @@ Spring.prototype.action = function() {
 
 function createPendulum(x, y, mass, velocity, balls, springs) {
 	var ball = new Ball(x, y, mass, velocity, 0, {"bounciness":0.95});
-	var spring = new Spring( ball, [x, offset], 500, y-2*g, 80, "#000000", "both");
+	var spring = new Spring( ball, [x, offset], 500, y-2*g, {"dampening":80, "colour":"#000000"});
 	balls.push(ball);
 	springs.push(spring);
 }
 
 function createMassSpring(x, y, velocity, radius, mass, balls, springs) {
 	var ball = new Ball(x, y, 1, 0, velocity, {});
-	var spring = new Spring( ball, [x, offset], 1, y-1000*g, 0.2, undefined, "both");
+	var spring = new Spring( ball, [x, offset], 1, y-1000*g, {"dampening":0.2, "fail point":125});
 	balls.push(ball);
 	springs.push(spring);	
 }
 
 function createString(joint1, ball2, balls, springs) {
-	var regularity = 3;
+	var regularity = 6;
 	var numberOfJoints = Math.floor(( distanceTo(joint1, ball2.getPos()) - 2*ball2.radius)/regularity);
 	var direction = directionTo(joint1, ball2.getPos());
 	var jointNumber = 0;
@@ -321,7 +364,7 @@ function createString(joint1, ball2, balls, springs) {
 	var springConst = 100;
 	var dampening = 5;
 	var friction = 0.0000002;
-	var radius = 1;
+	var radius = 2;
 	var ball = new Ball(x, y, ballMass, 0, 0, {"radius":radius, "colour":"#000000", "friction":friction});
 	var spring = new Spring( joint1, ball, springConst, distanceTo(joint1, ball.getPos()), 10, "#000000", "both");
 	springs.push(spring);
@@ -437,6 +480,82 @@ function drawContainer(container) {
 	ctx.closePath();
 }
 
+function graphSpeed(regularity) {
+	var graphCanvas = document.getElementById("graphCanvas");
+	var graphCtx = graphCanvas.getContext("2d");
+	graphCtx.clearRect(0,0,graphCanvas.width, graphCanvas.height);
+	var regularity = 1000;
+	var bins = []; //0.2 up to 3
+	var leftOvers = 0;
+	for (var i = 1; i <= 50; i++) {
+		bins.push({"upperSpeed":i*3/50, "number": 0});
+	}
+	var maxNumber = 0;
+	for (var i = 0; i < balls.length; i++) {
+		binned = false;
+		currentBall = balls[i];
+		for (var j = 0; j < bins.length; j++) {
+			if ( ( Math.pow(modulus([currentBall.speedx, currentBall.speedy]),1) < bins[j]["upperSpeed"] )  && (!binned) ) {
+				binned = true;
+				bins[j]["number"] += 1;
+				if (maxNumber < bins[j]["number"]) {
+					maxNumber = bins[j]["number"];
+				}
+			}
+			if ( (j === bins.length - 1) && (!binned) ) {
+				leftOvers += 1;
+			}
+		}
+	}
+	maxNumber = balls.length/15;
+	var speedString = "";
+	for (var i=0; i < bins.length; i++) {
+		speedString += bins[i]["number"].toString();
+		speedString += ", "
+	}
+	speedString += leftOvers.toString();
+	$("#speeds").html(speedString);
+	var graphMaxX = 660;
+	var graphMaxY = 175;
+	graphCtx.beginPath();
+	graphCtx.lineWidth = 2;
+	graphCtx.strokeStyle = "#000000";
+	graphCtx.moveTo(offset, 25);
+	graphCtx.lineTo(offset, graphMaxY);
+	graphCtx.lineTo(offset+graphMaxX, graphMaxY);
+	graphCtx.stroke();
+	graphCtx.closePath();
+	var xSize = graphMaxX/bins.length;
+	var maxSize = 150;
+	for (var i=0; i < bins.length; i++) {
+		graphCtx.fillStyle="red";
+		graphCtx.fillRect(offset+i*xSize, graphMaxY, xSize, -bins[i]["number"] * maxSize / maxNumber)
+	}
+	graphCtx.beginPath();
+	graphCtx.lineWidth = 2;
+	graphCtx.strokeStyle = "#000000";
+	graphCtx.moveTo(offset,graphMaxY);
+	var xPeakVal = 187;
+	var a = 1/(2* Math.pow(xPeakVal, 2));
+	var yPeakVal = 98;
+	var b = yPeakVal * Math.exp(1/2) *  Math.pow(2*a, 0.5) / (2*a);
+	//b=50000;
+	for (var x=0; x<650; x+=10) {
+		y = b*2*(a*Math.pow(x, 1)*Math.exp(-a*Math.pow(x, 2)));
+	    graphCtx.lineTo(x+offset, graphMaxY - y);
+	}
+	graphCtx.stroke();
+	graphCtx.closePath();
+	setTimeout(graphSpeed, regularity);
+}
+
+// y=2ave^-av^2
+// dy = e^(-av^2) - 2av^2 e^-av^2
+// 2av^2 = 1
+// v = 1/rt(2a)
+// a = 1/ 2*v^2
+// y = 2a*(1/rt(2a))*e(-a/2a) = b* 1/rt(2a) * e^(-1/2)
+
 var balls =[];
 var springs = [];
 var containers = [ {"X":[offset, canvas.width-offset], "Y":[offset, canvas.height-offset]} ];
@@ -444,7 +563,7 @@ var containers = [ {"X":[offset, canvas.width-offset], "Y":[offset, canvas.heigh
 function exampleScenario() {
 	newtonsBalls();
 	createMassSpring(550, 250, 1.5, 20,1, balls, springs);
-	randomBalls(offset, canvas.width-offset, canvas.height-offset-30, canvas.height-offset, 0, -2, 10, 1,10, {}, balls);
+	randomBalls(offset, canvas.width-offset, canvas.height-offset-30, canvas.height-offset, 0, -2,28, 1,4, {"radius":4},balls);
 	balls.push(new Ball(canvas.width/2, canvas.height-offset-50, 16, 0, -4, {"radius":40, "colour":"#AA00FF"}));
 }
 
@@ -453,8 +572,21 @@ function scenario2() {
 	createString([offset+200, offset], balls[balls.length-1], balls, springs);
 }
 
-exampleScenario();
+function testScenario() {
+	balls.push(new Ball(canvas.width/2, offset+100, 1, 0, 0, {}));
+}
+
+function maxwellScenario() {
+	//gravity = false;
+	heatmap = true;
+	randomBalls(offset, canvas.width-offset, offset, canvas.height-offset, 1.2, 0,40, 1,2, {},balls);
+	graphSpeed();
+}
+
+//testScenario();
+//exampleScenario();
 //scenario2();
+maxwellScenario();
 
 //balls.push(new Ball(100, 100, 1, 0, 0, {}));
 //~ springs.push(new Spring(balls[balls.length-1], balls[balls.length-2], 0.3, 250, 0, undefined));
@@ -562,8 +694,7 @@ $("#animCanvas").on('mousedown', function (evt) {
 			if (first) {
 				if (ballClicked != undefined) {
 					var k = 4*ballClicked.mass;
-					var dampening = 0;
-					springs.push(new Spring(currentMousePos, ballClicked, k, 0, dampening, undefined, "both"));
+					springs.push(new Spring(currentMousePos, ballClicked, k, 0, {}));
 					ballClicked.setProperties({friction:0.1});
 					first = false;
 					dragged = true;

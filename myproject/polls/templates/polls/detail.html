@@ -1,15 +1,35 @@
-<h1> {{ question.question_text }} </h1>
+{% extends "base.html" %}
+{% load staticfiles %}
 
-{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{% static 'polls/style.css' %}" />
+{% endblock %}
 
-<form action="{% url 'polls:vote' question.id %}" method="post"> 
-    
-    {% csrf_token %}
-    
-    {% for choice in question.choice_set.all %}
-        <input type="radio" name="choice" id="choice{{forloop.counter}}" value="{{ choice.id }}" />
-        <label for="choice{{ forloop.counter }}">{{choice.choice_text }}</label><br />
-    {% endfor %}
-    
-    <input type="submit" value="Vote" />
-</form>
+{% block content %}
+
+	<h1> {{ question.question_text }} </h1>
+
+	{% if error_message %}<p><strong>{{ error_message }}</strong></p>{% endif %}
+
+	<form action="{% url 'polls:vote' question.id %}" method="post"> 
+		
+		{% csrf_token %}
+		
+		{% for choice in question.choice_set.all %}
+			<input type="radio" name="choice" id="choice{{forloop.counter}}" value="{{ choice.id }}" />
+			<label for="choice{{ forloop.counter }}">{{choice.choice_text }}</label><br />
+		{% endfor %}
+		
+		{% if question.can_add_new_choice %}
+		<input type="radio" name="choice" id="new_choice" value="new_choice" />
+		<label for="new_choice"> Other: </label>
+		<input type="text" name="new_choice_string" id="new_choice_textbox"> <br />
+		{% endif %}
+		
+		<input type="submit" value="Vote" />
+	</form>
+	<form action="{% url 'polls:results' question.id %}" method="get">
+		<input type="submit" value="View Results">
+	</form>
+	
+{% endblock %}

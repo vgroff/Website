@@ -12,7 +12,7 @@ class IndexView(generic.ListView):
 
     # Returns the last five questions
     def get_queryset(self):
-        return Question.objects.filter(pub_date__lte=timezone.now()).order_by('-pub_date')[:5]
+        return Question.objects.exclude(choice__isnull=True).filter(pub_date__lte=timezone.now()).order_by('-pub_date')[:5]
 
 
 class DetailView(generic.DetailView):
@@ -26,7 +26,10 @@ class ResultsView(generic.DetailView):
 def vote(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     try:
-        selected_choice = question.choice_set.get(pk=request.POST['choice'])
+        if request.POST['choice'] == "new_choice":  
+			selected_choice = question.choice_set.create(choice_text=request.POST['new_choice_string'], votes=0)
+        else:
+			selected_choice = question.choice_set.get(pk=request.POST['choice'])
     except (KeyError, Choice.DoesNotExist):
         return render(request, 'polls/detail.html', { 'question':question, 'error_message':"You didn't select a choice" })
     else:
