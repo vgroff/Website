@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+
+{% block css %}
+	<link rel="stylesheet" type="text/css" href=" {% static 'physics_engine/style.css' %} " />
+{% endblock %}
+
+{% block content %}
+	<h1> Physics Engine </h1>
+	</br>
+	<canvas id="animCanvas" class="physicsCanvas"></canvas>
+{% endblock %}
+
+{% block js %}
+	<script src="{% static 'physics_engine/bouncingBallsAnim.js' %}"></script>
+{% endblock %}
+

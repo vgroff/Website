@@ -24,7 +24,8 @@
 // reduce dampening on string to have it behave more like a string
 // have textbox to change graph live
 // have slow mo in the UI
-
+// use newton's cradle springs to make rods + solids?
+	
 var gravity = true;
 var g = 0.045;
 var first = false;

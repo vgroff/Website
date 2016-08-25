@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'polls.apps.PollsConfig',
     'home.apps.HomeConfig',
+    'physics_engine.apps.PhysicsEngineConfig',
+    'to_do.apps.ToDoConfig',
 ]
 
 MIDDLEWARE_CLASSES = [
