@@ -21,5 +21,6 @@ urlpatterns = [
     url(r'^polls/', include('polls.urls')), 
     url(r'^physics/', include('physics_engine.urls')),
     url(r'^to-do/', include('to_do.urls')),
+    url(r'^other/', include('other_projects.urls')),
     url(r'^admin/', admin.site.urls),
 ]

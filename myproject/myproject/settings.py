@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'home.apps.HomeConfig',
     'physics_engine.apps.PhysicsEngineConfig',
     'to_do.apps.ToDoConfig',
+    'other_projects.apps.OtherProjectsConfig'
 ]
 
 MIDDLEWARE_CLASSES = [
