@@ -4,6 +4,8 @@ physicsEngine.Balls = Backbone.Collection.extend({
 
 	// Reference to this collection's model.
 	model: physicsEngine.Ball,
+	name: "balls",
+	childView: physicsEngine.BallView,
 
 	nextOrder: function() {
 	  if ( !this.length ) {

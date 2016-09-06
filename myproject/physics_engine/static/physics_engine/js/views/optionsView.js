@@ -15,7 +15,9 @@ physicsEngine.OptionsView = Backbone.View.extend({
 
 	
 	initialize: function() {
+		this.model = new physicsEngine.Options();
 		this.$playButton = $('#physicsPlayButton');  
+		this.listenTo(this.model, "change", this.render);
 	},
 	
 	render: function() {
@@ -30,20 +32,22 @@ physicsEngine.OptionsView = Backbone.View.extend({
 	
 	togglePlay: function() {
 		this.model.togglePlay();
-		this.render();
+		this.trigger("togglePlay");
 	},
 	
 	triggerStep: function(evt) {
-		if (evt.type == "mousedown") {
+		if (evt.type === "mousedown") {
 			this.stepping = true;
 			setTimeout(this.triggerStep.bind(this), physicsEngine.fps*3, {});
 		}
-		else if (evt.type == "mouseup"){
+		else if (evt.type === "mouseup"){
 			this.stepping = false;
 		}
 		else if (this.stepping) {
-			this.trigger("stepEngine");
+			this.trigger("stepAnimation");
 			setTimeout(this.triggerStep.bind(this), physicsEngine.fps*3, {});
 		}
 	},
 });
+
+physicsEngine.optionsView = new physicsEngine.OptionsView;

@@ -9,14 +9,32 @@ canvas {
 }
 
 #physicsEngineOptions {
-/*
-	background-color: blue;
-*/
 	width: 85%;
 	margin: 0 auto;
+	padding: 30px 0px 30px 0px;
 }
 
 .physicsEngineOptions {
 	padding: 10px 70px 10px 70px;
 	margin: 10px;
+}
+
+.physicsEngineOptions:hover {
+	cursor: hand;
+	cursor: pointer;
+}
+
+.physicsEditHeadings{
+	display: inline;
+	padding: 10px;
+	border-radius: 15px 15px 0px 0px;
+	margin-right: 5px;
+}
+
+.physicsEditHeadingSelected { 
+	background-color:#9b59b6;
+}
+
+#physicsEditingSection {
+	background-color:#9b59b6;
 }

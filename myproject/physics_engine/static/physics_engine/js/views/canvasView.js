@@ -5,7 +5,8 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	// Instead of generating a new element, bind to the existing skeleton of
 	// the App already present in the HTML.
 	el: '#physicsCanvas',
-	
+	rendering: false,
+	playing: false,
 	
 	events: {
 		'mousedown': 'userInteract',
@@ -14,11 +15,45 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	
 	initialize: function() {
 		this.self = this;
+		this.listenTo(physicsEngine.optionsView, 'togglePlay', this.togglePlay);
+		this.listenTo(physicsEngine.optionsView, 'stepAnimation', this.step);
 	},
 	
 	render: function(applyPhysics) {
-		if (applyPhysics) {this.applyPhysics();}
 		this.drawAll();
+	},
+	
+	animate: function() {
+		if (this.rendering === false) {
+			var date = new Date();
+			var time = date.getTime();
+			this.rendering = true;
+			
+			this.applyPhysics();
+			this.render();
+			
+			date = new Date();
+			if (this.playing === true) {
+				if ( date.getTime() - time < physicsEngine.fps) {
+					setTimeout(this.animate.bind(this), physicsEngine.fps - date.getTime() + time);
+				}
+				else {
+					setTimeout(this.animate.bind(this), 1);
+				} 
+			}
+			this.rendering = false;
+		}	
+	},
+	
+	togglePlay: function() {
+		this.playing = !this.playing;
+		if (this.playing) { this.animate();}
+	},
+	
+	step: function() {
+		if (!this.playing) {
+			this.animate();
+		}
 	},
 	
 	applyPhysics: function() {
@@ -35,6 +70,7 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		physicsEngine.balls.forEach( function(ball) {
 			ball.applyContainer();
 		});	
+		
 	},
 	
 	applyCollisions: function() {
@@ -51,11 +87,11 @@ physicsEngine.CanvasView = Backbone.View.extend({
 				grid[i].push([[],[]]);
 			}
 		}
+		// Adding to the grid and secondary grid 
 		physicsEngine.balls.forEach( function(ball) {
 			ball.set("collided",[]);
 			if ( (ball.get("radius") >= rowSeparation/2) || (ball.get("radius") >= colSeparation/2) ) {
 				extras.push(ball);
-				console.log("extras");
 			}
 			else {
 				let col = Math.floor(ball.get("x") / colSeparation);
@@ -63,8 +99,13 @@ physicsEngine.CanvasView = Backbone.View.extend({
 				grid[row][col][0].push(ball);
 				for (var i=-1; i<=1; i++) {
 					for (var j=-1; j<=1; j++) {
-						if (((i!==0) || (j!==0)) && (row+i>0) && (row+i<numberOfRows) && (col+j<numberOfRows) && (col+j>0)) {
-							if ( ball.get("radius") <= distanceTo(ball.getVectorPos(), [(col+0.5+0.5*j)*colSeparation,(row+0.5+0.5*i)*rowSeparation]) ) {
+						if (((i!==0) || (j!==0)) && (row+i>=0) && (row+i<numberOfRows) && (col+j<numberOfRows) && (col+j>=0)) {
+							let x = (col+0.5+0.5*j)*colSeparation;
+							let y = (row+0.5+0.5*i)*rowSeparation;
+							if (i===0) { y =ball.get("y");}
+							if (j===0) { x = ball.get("x");}
+							var pos = ball.getVectorPos();
+							if ( ball.get("radius") >= distanceTo(ball.getVectorPos(), [x,y]) ) {
 								grid[row+i][col+j][1].push(ball);
 							}
 						}
@@ -72,28 +113,28 @@ physicsEngine.CanvasView = Backbone.View.extend({
 				}
 			}
 		});
-		// calculating some bounces twice, but this doesn't introduce extra energy so it doesn't really matter.
+		// Possibly calculating some bounces twice, but this doesn't introduce extra energy so it doesn't really matter.
 		for (var i=0; i<numberOfRows; i++) {
 			for (var j=0; j<numberOfRows; j++) {
 				for (var k=0; k<grid[i][j][0].length; k++) {
 					for (var l=k+1; l<grid[i][j][0].length; l++) {
 						let ball1 = grid[i][j][0][k];
 						let ball2 = grid[i][j][0][l];
-						if ( ( distanceTo(ball1.getVectorPos(), ball2.getVectorPos()) <= (ball1.get("radius") + ball2.get("radius")) ) ) {
+						if ( ( distanceTo(ball1.getVectorPos(), ball2.getVectorPos()) <= (ball1.get("radius") + ball2.get("radius") ) ) ) {
 							self.collide(ball1, ball2);
 						}
 					}
 					for (var l=0; l<grid[i][j][1].length; l++) {
 						let ball1 = grid[i][j][0][k];
 						let ball2 = grid[i][j][1][l];
-						if ( ( distanceTo(ball1.getVectorPos(), ball2.getVectorPos()) <= (ball1.get("radius") + ball2.get("radius")) ) ) {
+						if ( ( distanceTo(ball1.getVectorPos(), ball2.getVectorPos()) <= (ball1.get("radius") + ball2.get("radius") ) ) ) {
 							self.collide(ball1, ball2);
 						}						
 					}
 					for (var l=0; l<extras.length; l++) {
 						let ball1 = grid[i][j][0][k];
 						let ball2 = extras[l];
-						if ( ( distanceTo(ball1.getVectorPos(), ball2.getVectorPos()) <= (ball1.get("radius") + ball2.get("radius")) ) ) {
+						if ( ( distanceTo(ball1.getVectorPos(), ball2.getVectorPos()) <= (ball1.get("radius") + ball2.get("radius") ) ) ) {
 							self.collide(ball1, ball2);
 						}						
 					}
@@ -120,7 +161,7 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	
 	collide: function(ball1, ball2) {
 		var vectorTo = directionTo(ball1.getVectorPos(), ball2.getVectorPos());
-		if ( (dotProduct(vectorTo, [ball1.get("speedX")-ball2.get("speedX"), ball1.get("speedY")-ball2.get("speedY")]) > 0) ) { 		
+		if ( (dotProduct(vectorTo, [ball1.get("speedX")-ball2.get("speedX"), ball1.get("speedY")-ball2.get("speedY")]) > 0) ) { 	
 			if (ball1.get("bounciness") > ball2.get("bounciness")) {
 				var bounciness = ball1.get("bounciness");
 			}
@@ -143,7 +184,28 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		}
 	},
 	
-	
+	fillRandomly: function(x1, y1, x2, y2, number, ballProps) {
+		var successes= 0;
+		var successiveFailures = 0;
+		var balls = [];
+		var radius = ballProps["radius"] || physicsEngine.Balls.defaults["radius"];
+		while ((successes < number) && (successiveFailures < 2000)){
+			var x = Math.random() * (x2 - x1) + x1;
+			var y = Math.random() * (y2 - y1) + y1;
+			var failed = false;
+			physicsEngine.balls.forEach( function(ball) {
+				if (distanceTo([x,y], ball.getVectorPos()) <= ball.get("radius") + radius){
+					successiveFailures++;
+					failed = true;
+				}
+			});
+			if (!failed) {
+				successiveFailures = 0;
+				successes++;
+				physicsEngine.balls.add(new physicsEngine.Ball($.extend({}, ballProps, {x:x, y:y})));
+			}
+		}
+	},
 	
 	userInteract: function(evt) {
 		var self = this.self;
@@ -264,3 +326,5 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		ctx.closePath();	
 	},
 });
+
+physicsEngine.canvasView = new physicsEngine.CanvasView();

@@ -8,7 +8,6 @@ physicsEngine.Container = Backbone.Model.extend({
 		xMax: physicsEngine.canvas.width - physicsEngine.sideOffset,
 		yMin: physicsEngine.sideOffset,
 		yMax: physicsEngine.canvas.height - physicsEngine.sideOffset,
-		numberOfBalls: 0
 	},
 
 });

@@ -6,10 +6,10 @@ var app = app || {};
 
 var Workspace = Backbone.Router.extend({
 	routes:{
-	  '*filter': 'setFilter'
+	  '*filter': 'filterEdit'
 	},
 
-	setFilter: function( param ) {
+	filterEdit: function( param ) {
 	  // Set the current filter to be used
 	  if (param) {
 		param = param.trim();
@@ -18,7 +18,7 @@ var Workspace = Backbone.Router.extend({
 
 	  // Trigger a collection filter event, causing hiding/unhiding
 	  // of Todo view items
-	  app.Todos.trigger('filter');
+	  app.Todos.trigger('filterEdit');
 	}
 });
 
