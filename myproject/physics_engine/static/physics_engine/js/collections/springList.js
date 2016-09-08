@@ -4,16 +4,18 @@ physicsEngine.Springs = Backbone.Collection.extend({
 
 	// Reference to this collection's model.
 	model: physicsEngine.Spring,
+	name: "Springs",
+	nameModel: "Spring",
 
-	nextOrder: function() {
+	nextId: function() {
 	  if ( !this.length ) {
 		return 1;
 	  }
-	  return this.last().get('order') + 1;
+	  return this.last().get('id') + 1;
 	},
 
-	comparator: function( spring ) {
-	  return spring.get('order');
+	comparator: function( ball ) {
+	  return ball.get('id');
 	}
 });
 

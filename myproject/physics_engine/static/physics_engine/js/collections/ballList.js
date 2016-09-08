@@ -4,18 +4,18 @@ physicsEngine.Balls = Backbone.Collection.extend({
 
 	// Reference to this collection's model.
 	model: physicsEngine.Ball,
-	name: "balls",
-	childView: physicsEngine.BallView,
+	name: "Balls",
+	nameModel: "Ball",
 
-	nextOrder: function() {
+	nextId: function() {
 	  if ( !this.length ) {
 		return 1;
 	  }
-	  return this.last().get('order') + 1;
+	  return this.last().get('id') + 1;
 	},
 
 	comparator: function( ball ) {
-	  return ball.get('order');
+	  return ball.get('id');
 	}
 });
 

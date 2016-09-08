@@ -15,23 +15,44 @@
 			<button id="physicsPlayButton" class="physicsEngineOptions">Play</button>
 			<button id="physicsStepButton" class="physicsEngineOptions">Step</button>
 		</div>
-		<div id="physicsEngineUI">
-<!--
-				<h2 class="physicsEditHeadings physicsEditHeadingSelected">Balls</h2>
-				<h2 class="physicsEditHeadings">Springs</h2>
-				<h2 class="physicsEditHeadings">Containers</h2>
-				<h2 class="physicsEditHeadings">Other</h2>
-				<h2 class="physicsEditHeadings">Examples</h2>
--->
-<!--
-				<div id="physicsEditingSection">
-					Here is the bit with the UI
-				</div>
--->
-		</div>
+	
 	</section>
 	
 	{% verbatim %}
+	
+	<script type="text/template" id="ballTemplate">
+		<li><h3>Ball <%- id %></h3></li>
+	</script>
+	
+	<script type="text/template" id="columnTemplate">
+	<ul class="column textColumn">
+		<% for (var i=0; i < text.length; i++) { %>
+			<li><%= text[i] %></li>
+		<% } %>
+	</ul>
+	</script>
+	
+	<script type="text/template" id="statsColumnTemplate">
+	<div class="column statsColumn">
+		<% for (var i=0; i < stats.length; i++) { %>
+			<p><%= stats[i] %></p>
+		<% } %>
+	</div>
+	</script>
+
+	<script type="text/template" id="editColumnTemplate">	
+	<div class="column inputColumn">
+		<% for (var i=0; i < attrs.length; i++) { %>
+			<% if (attrs[i].type === "input") { %>
+				<input class="editAttr inputAttr" data-attr=<%-attrs[i].attr%>>
+			<% } %>
+			<% if (attrs[i].type === "bool") { %>
+				<button class="editAttr toggleAttr" data-attr=<%-attrs[i].attr%>>Toggle</button>
+			<% } %>
+		<% } %>
+	</div>
+	</script>
+
 	{% endverbatim %}
 {% endblock %}
 
@@ -47,18 +68,19 @@
 	
 	<script src=" {% static 'physics_engine/js/helpers/mathHelpers.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/helpers/mainSetup.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/routers/physicsRouter.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/models/container.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/collections/containerList.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/models/ball.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/ballView.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/collections/ballList.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/models/spring.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/views/springView.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/collections/springList.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/editView.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/models/options.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/optionsView.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/canvasView.js' %} "></script>
-	<script src=" {% static 'physics_engine/js/routers/physicsRouter.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/appView.js' %} "></script>
 	
 {% endblock %}

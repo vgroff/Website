@@ -13,5 +13,3 @@ physicsEngine.Options = Backbone.Model.extend({
 	},
 	
 });
-
-physicsEngine.globalOptions = new physicsEngine.Options();

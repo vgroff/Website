@@ -17,6 +17,12 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		this.self = this;
 		this.listenTo(physicsEngine.optionsView, 'togglePlay', this.togglePlay);
 		this.listenTo(physicsEngine.optionsView, 'stepAnimation', this.step);
+		this.listenTo(physicsEngine.balls, 'change', this.render);
+		this.listenTo(physicsEngine.balls, 'add', this.render);
+		this.listenTo(physicsEngine.springs, 'change', this.render);
+		this.listenTo(physicsEngine.springs, 'add', this.render);
+		this.listenTo(physicsEngine.containers, 'change', this.render);
+		this.listenTo(physicsEngine.containers, 'add', this.render);
 	},
 	
 	render: function(applyPhysics) {
@@ -58,8 +64,9 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	
 	applyPhysics: function() {
 		// Do all velocity calcs first, then move, then do collisions
+		var self = this;
 		physicsEngine.springs.forEach( function(spring) {
-			spring.actionSpring();
+			self.actionSpring(spring);
 		});
 		physicsEngine.balls.forEach( function(ball) {
 			ball.applyGravity();
@@ -71,6 +78,49 @@ physicsEngine.CanvasView = Backbone.View.extend({
 			ball.applyContainer();
 		});	
 		
+	},
+	
+	actionSpring: function(spring) {
+		let point1 = spring.get("point1");
+		let point2 = spring.get("point2");
+		
+		if ( point1 instanceof Array ) {
+			var vector = point1;
+		}
+		else {
+			point1 = physicsEngine.balls.get(point1);
+			if (!point1) { return; }
+			var vector = physicsEngine.balls.get(point1).getVectorPos();
+		}	
+		if (point2 instanceof Array) {
+			var vector1 = point2;
+		}
+		else {
+			point2 = physicsEngine.balls.get(point2);
+			if (!point2) { return; }
+			var vector1 = physicsEngine.balls.get(point2).getVectorPos();
+		}
+		var extension = distanceTo(vector, vector1) - spring.get("length");
+		spring.set("extension", extension);
+		let direction = spring.get("direction");	
+		if ( (direction == "both") || (direction == "pull" && extension > 0) || (direction == "push" && extension < 0) ) {
+			force = spring.get("k") * extension;
+			if ( !( point1 instanceof Array ) ) {
+				point1.changeSpeedBy(force/point1.get("mass"), directionTo(vector, vector1));
+				point1.changeSpeedBy(spring.get("dampening")*dotProduct(point1.getVectorSpeed(), directionTo(vector, vector1)), directionTo(vector1, vector));
+			}	
+			if ( !( point2 instanceof Array ) ) {
+				point2.changeSpeedBy(force/point2.get("mass"), directionTo(vector1, vector));
+				point2.changeSpeedBy(spring.get("dampening")*dotProduct(point2.getVectorSpeed(), directionTo(vector1, vector)), directionTo(vector, vector1));
+			}
+		}
+		//console.log(spring.extension);
+		if (spring.failPoint) {
+			if (extension	>= spring.get("failPoint")) {
+				spring.destroy();
+			}
+		}
+
 	},
 	
 	applyCollisions: function() {
@@ -96,17 +146,19 @@ physicsEngine.CanvasView = Backbone.View.extend({
 			else {
 				let col = Math.floor(ball.get("x") / colSeparation);
 				let row = Math.floor(ball.get("y") / rowSeparation);
-				grid[row][col][0].push(ball);
-				for (var i=-1; i<=1; i++) {
-					for (var j=-1; j<=1; j++) {
-						if (((i!==0) || (j!==0)) && (row+i>=0) && (row+i<numberOfRows) && (col+j<numberOfRows) && (col+j>=0)) {
-							let x = (col+0.5+0.5*j)*colSeparation;
-							let y = (row+0.5+0.5*i)*rowSeparation;
-							if (i===0) { y =ball.get("y");}
-							if (j===0) { x = ball.get("x");}
-							var pos = ball.getVectorPos();
-							if ( ball.get("radius") >= distanceTo(ball.getVectorPos(), [x,y]) ) {
-								grid[row+i][col+j][1].push(ball);
+				if ((row>=0) && (row<numberOfRows) && (col<numberOfRows) && (col>=0)){
+					grid[row][col][0].push(ball);
+					for (var i=-1; i<=1; i++) {
+						for (var j=-1; j<=1; j++) {
+							if (((i!==0) || (j!==0)) && (row+i>=0) && (row+i<numberOfRows) && (col+j<numberOfRows) && (col+j>=0)) {
+								let x = (col+0.5+0.5*j)*colSeparation;
+								let y = (row+0.5+0.5*i)*rowSeparation;
+								if (i===0) { y =ball.get("y");}
+								if (j===0) { x = ball.get("x");}
+								var pos = ball.getVectorPos();
+								if ( ball.get("radius") >= distanceTo(ball.getVectorPos(), [x,y]) ) {
+									grid[row+i][col+j][1].push(ball);
+								}
 							}
 						}
 					}
@@ -215,12 +267,12 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		physicsEngine.balls.forEach( function(ball) {	
 			if (distanceTo(currentMousePos, ball.getVectorPos()) <= ball.get("radius")  ){
 				var clickedBall = ball;
-				spring = new physicsEngine.Spring({point1:ball, point2: currentMousePos, length:0, k:0.005*ball.get("mass"), dampening:0});
+				spring = new physicsEngine.Spring({point1:ball.get("id"), point2: currentMousePos, length:0, k:0.005*ball.get("mass"), dampening:0, id: physicsEngine.springs.nextId()});
 				physicsEngine.springs.add(spring);
 				var oldFriction = ball.get("friction");
 				ball.set("friction", 0.08);
 				self.$el.on("mouseup", function(evt) {
-					spring.destroy();
+					physicsEngine.springs.remove(spring);
 					ball.set("friction", oldFriction);
 					self.$el.off("mouseup");
 					self.$el.off("mousemouve");
@@ -236,8 +288,8 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	drawAll: function() {
 		let self = this;
 		physicsEngine.ctx.clearRect(0,0,physicsEngine.canvas.width, physicsEngine.canvas.height);
-		physicsEngine.balls.forEach( 		function(ball) {self.drawBall(ball);} );
 		physicsEngine.springs.forEach( 		function(spring) {self.drawSpring(spring);} );
+		physicsEngine.balls.forEach( 		function(ball) {self.drawBall(ball);} );
 		physicsEngine.containers.forEach( 	function(cont) {self.drawContainer(cont);} );
 	},
 	
@@ -268,13 +320,22 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		if (traceArray.length !== 0) {
 			ctx.beginPath();
 			for (var i=0; i < traceArray.length-1; i++) {
-				ctx.strokeStyle = ball.colour;
+				ctx.strokeStyle = ball.get("colour");
 				ctx.lineWidth = 2;
 				ctx.moveTo(traceArray[i][0], traceArray[i][1]);
 				ctx.lineTo(traceArray[i+1][0], traceArray[i+1][1]);
 			}
 			ctx.stroke();
 			ctx.closePath();
+		}
+		
+		if (!this.playing) {
+			ctx.beginPath();
+			ctx.strokeStyle = "#000000";
+			ctx.moveTo(ball.get("x"), ball.get("y"));
+			ctx.lineTo(ball.get("x") + ball.get("speedX")*10, ball.get("y")+ball.get("speedY")*10);	
+			ctx.stroke();
+			ctx.closePath();		
 		}
 	},
 	
@@ -293,37 +354,42 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	},
 
 	drawSpring: function(spring) {
-		let ctx = physicsEngine.ctx;
-		ctx.beginPath();
-		if (spring.get("colour") == "strengthMap") {
-			var colours = ["#FFFFFF", "#FFBBBB", "#FF9999", "#FF7777", "#FF5555", "#FF3333", "#FF2222", "#FF1111"];
-			var forces  = [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14];
-			var max = 0;
-			for (var i=0; i<forces.length; i++) {
-				if ( Math.abs(spring.get("extension")*spring.get("k")) >= forces[i] ) {
-					max = i;
+		try {
+			let ctx = physicsEngine.ctx;
+			ctx.beginPath();
+			if (spring.get("colour") == "strengthMap") {
+				var colours = ["#FFFFFF", "#FFBBBB", "#FF9999", "#FF7777", "#FF5555", "#FF3333", "#FF2222", "#FF1111"];
+				var forces  = [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14];
+				var max = 0;
+				for (var i=0; i<forces.length; i++) {
+					if ( Math.abs(spring.get("extension")*spring.get("k")) >= forces[i] ) {
+						max = i;
+					}
 				}
+				ctx.strokeStyle = colours[max];
 			}
-			ctx.strokeStyle = colours[max];
+			else {
+				ctx.strokeStyle = spring.coloured;
+			}
+			ctx.lineWidth = 2;
+			if (spring.get("point1") instanceof Array) {
+				ctx.moveTo(spring.get("point1")[0], spring.get("point1")[1]);
+			}
+			else {
+				let ball = physicsEngine.balls.get(spring.get("point1"));
+				ctx.moveTo(ball.get("x"), ball.get("y"));
+			}
+			if (spring.get("point2") instanceof Array) {
+				ctx.lineTo(spring.get("point2")[0], spring.get("point2")[1]);
+			}
+			else {
+				let ball = physicsEngine.balls.get(spring.get("point2"));
+				ctx.lineTo(ball.get("x"), ball.get("y"));
+			}
+			ctx.stroke();
+			ctx.closePath();	
 		}
-		else {
-			ctx.strokeStyle = spring.coloured;
-		}
-		ctx.lineWidth = 2;
-		if (spring.get("point1") instanceof Array) {
-			ctx.moveTo(spring.get("point1")[0], spring.get("point1")[1]);
-		}
-		else {
-			ctx.moveTo(spring.get("point1").get("x"), spring.get("point1").get("y"));
-		}
-		if (spring.get("point2") instanceof Array) {
-			ctx.lineTo(spring.get("point2")[0], spring.get("point2")[1]);
-		}
-		else {
-			ctx.lineTo(spring.get("point2").get("x"), spring.get("point2").get("y"));
-		}
-		ctx.stroke();
-		ctx.closePath();	
+		catch (TypeError) {}
 	},
 });
 

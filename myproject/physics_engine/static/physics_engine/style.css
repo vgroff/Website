@@ -25,16 +25,83 @@ canvas {
 }
 
 .physicsEditHeadings{
+	text-decoration: none;
 	display: inline;
 	padding: 10px;
 	border-radius: 15px 15px 0px 0px;
 	margin-right: 5px;
+	font-size: 1.9em;
+	font-weight: bold;
 }
 
 .physicsEditHeadingSelected { 
 	background-color:#9b59b6;
 }
 
-#physicsEditingSection {
-	background-color:#9b59b6;
+#physicsEngineUI {
 }
+
+.physicsEditingSection {
+	background-color:#9b59b6;
+	padding: 20px 20px 30px 40px;
+}
+
+.physicsEditingSection .addNew {
+	display:block;
+	padding: 8px 20px 8px 20px;
+	margin: 0 auto;
+}
+
+.physicsEditViews {
+    padding: 0;
+    margin-bottom: 40px;
+}
+
+.physicsEditViews > ul li {
+    margin-bottom: 10px;
+}
+
+.physicsEditViews .column {
+    display: inline-block;
+    vertical-align:top;
+    margin-right: 10px;
+}
+
+.physicsEditViews .textColumn {
+	padding-left: 18px;
+}
+
+
+.physicsEditViews .statsColumn {
+	margin-right: 6px;
+	text-align:right;
+}
+
+.physicsEditViews .statsColumn > *{
+	margin-bottom: 10px;
+}
+
+.physicsEditViews .inputColumn {
+	margin-left: 4px;
+    margin-right: 15px;
+}
+
+
+.physicsEditViews .editAttr {
+    display:block;
+}
+
+.physicsEditViews .inputAttr {
+    max-width: 36px;
+    margin: 0;
+}
+
+
+.physicsEditViews .toggleEdit {
+	display: block;
+	padding: 2px 15px 2px 15px;
+}
+
+
+
+

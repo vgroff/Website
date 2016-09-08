@@ -1,6 +1,6 @@
 var physicsEngine = physicsEngine || {};
 
-physicsEngine.editChildView = Backbone.View.extend({
+physicsEngine.SpringView = Backbone.View.extend({
 	
 	tagName: "ul",
 	

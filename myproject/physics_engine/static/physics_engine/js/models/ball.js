@@ -3,8 +3,8 @@ var physicsEngine = physicsEngine || {};
 physicsEngine.Ball = Backbone.Model.extend({
 
 	defaults: {
-		x: null,
-		y: null,
+		x: 20,
+		y: 20,
 		mass: 1,
 		speedX: 0,
 		speedY: 0,
@@ -14,8 +14,13 @@ physicsEngine.Ball = Backbone.Model.extend({
 		bounciness: 1.0,
 		friction: 0,
 		colour: physicsEngine.defaultColour,
-		container: physicsEngine.containers.get(1),
-		collided: []
+		containerId: 1,
+		collided: [],
+		name: "Ball"
+	},
+	
+	initialize: function() {
+		this.set("traceArray", []);
 	},
 	
 	applyContainer: function() {
@@ -24,10 +29,16 @@ physicsEngine.Ball = Backbone.Model.extend({
 		let radius = this.get("radius");
 		let speedX = this.get("speedX");
 		let speedY = this.get("speedY");
-		let container = this.get("container");
+		let container = physicsEngine.containers.get(this.get("containerId"));
 		let bounciness = this.get("bounciness");
-		let xLimits = [container.get("xMin"), container.get("xMax")];
-		let yLimits = [container.get("yMin"), container.get("yMax")];
+		if (container) {
+			var xLimits = [container.get("xMin"), container.get("xMax")];
+			var yLimits = [container.get("yMin"), container.get("yMax")];
+		}
+		else {
+			var xLimits = [-5000, 5000];
+			var yLimits = [-5000, 5000];
+		}
 		let traceArray = this.get("traceArray");
 		let g = physicsEngine.g;
 		let trace = this.get("trace");
@@ -95,6 +106,22 @@ physicsEngine.Ball = Backbone.Model.extend({
 	
 	getVectorSpeed: function() {
 		return [this.get("speedX"), this.get("speedY")];
+	},
+	
+	getAttr: function() {
+		 return [
+			{ "attr":"x",  			"value":this.get("x").toFixed(2), "type":"input", name: "X Position"},
+			{ "attr":"y",  			"value":this.get("y").toFixed(2), "type":"input", name: "Y Position"},
+			{ "attr":"speedX",  	"value":this.get("speedX").toFixed(2), "type":"input", name: "X Speed"},
+			{ "attr":"speedY",  	"value":this.get("speedY").toFixed(2), "type":"input", name: "Y Speed"},
+			{ "attr":"mass",  		"value":this.get("mass").toFixed(2), "type":"input"},
+			{ "attr":"radius",  	"value":this.get("radius"), "type":"input"},
+			{ "attr":"bounciness",  "value":this.get("bounciness").toFixed(3), "type":"input"},
+			{ "attr":"friction", 	"value":this.get("friction").toFixed(3),"type":"input"},
+			{ "attr":"trace", 		"value":this.get("trace"),"type":"bool"},
+			{ "attr":"containerId", "value":this.get("containerId"),"type":"input"},
+			{ "attr":"colour", 		"value":this.get("colour"), "type":"input"},
+		];
 	},
 	
 });

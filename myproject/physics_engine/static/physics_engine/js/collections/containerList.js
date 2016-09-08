@@ -4,12 +4,14 @@ physicsEngine.Containers = Backbone.Collection.extend({
 
 	// Reference to this collection's model.
 	model: physicsEngine.Container,
+	name: "Containers",
+	nameModel: "Container",
 
-	nextOrder: function() {
+	nextId: function() {
 	  if ( !this.length ) {
 		return 1;
 	  }
-	  return this.last().get('order') + 1;
+	  return this.last().get('id') + 1;
 	},
 
 	comparator: function( container ) {
@@ -18,4 +20,4 @@ physicsEngine.Containers = Backbone.Collection.extend({
 });
 
 physicsEngine.containers = new physicsEngine.Containers();
-physicsEngine.containers.add([new physicsEngine.Container({"id":physicsEngine.containers.nextOrder()})]);
+physicsEngine.containers.add([new physicsEngine.Container({"id":physicsEngine.containers.nextId()})]);

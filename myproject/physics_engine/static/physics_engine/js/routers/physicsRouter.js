@@ -5,8 +5,12 @@ var Workspace = Backbone.Router.extend({
 	routes:{
 	  '*collection': 'setCollection'
 	},
+	
+	initialize: function() {
+		
+	},
 
-		setFilter: function( param ) {
+	setCollection: function( param ) {
 		  // Set the current filter to be used
 		  if (param) {
 			param = param.trim();
@@ -19,5 +23,5 @@ var Workspace = Backbone.Router.extend({
 	}
 });
 
-physicsEngine.TodoRouter = new Workspace();
+physicsEngine.physicsRouter = new Workspace();
 Backbone.history.start();
