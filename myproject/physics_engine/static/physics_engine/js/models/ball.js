@@ -13,13 +13,15 @@ physicsEngine.Ball = Backbone.Model.extend({
 		radius: 12,
 		bounciness: 1.0,
 		friction: 0,
-		colour: physicsEngine.defaultColour,
+		colour: "",
 		containerId: 1,
 		collided: [],
-		name: "Ball"
 	},
 	
 	initialize: function() {
+		if (this.get("colour") === "") {
+			this.set("colour", physicsEngine.colours[ Math.floor(Math.random() * physicsEngine.colours.length)])
+		}
 		this.set("traceArray", []);
 	},
 	
@@ -47,7 +49,7 @@ physicsEngine.Ball = Backbone.Model.extend({
 			// Check for collision with sides
 			if ( (y + radius >= yLimits[1]) && (speedY > 0) ) {
 				var overlap = y + radius - yLimits[1];
-				speedY = speedY + 1.00107*g * (speedY - overlap)/speedY;
+				speedY = speedY + 1.00150*g * (speedY - overlap)/speedY; //1.00107
 				speedY = -1 * bounciness * speedY;
 				y = yLimits[1] - radius;
 			}
@@ -72,16 +74,16 @@ physicsEngine.Ball = Backbone.Model.extend({
 			
 		}
 		
-		this.set("x", x);
-		this.set("y", y);
-		this.set("speedX", speedX);
-		this.set("speedY", speedY);
-		this.set("traceArray", traceArray);		
+		this.set("x", x, {silent:true});
+		this.set("y", y, {silent:true});
+		this.set("speedX", speedX, {silent:true});
+		this.set("speedY", speedY, {silent:true});
+		this.set("traceArray", traceArray, {silent:true});		
 
 	},
 	
 	applyGravity: function() {
-		this.set("speedY", this.get("speedY")+physicsEngine.g);
+		this.set("speedY", this.get("speedY")+physicsEngine.g, {silent:true});
 	},
 	
 	applyFriction: function() {
@@ -91,13 +93,19 @@ physicsEngine.Ball = Backbone.Model.extend({
 	},
 	
 	move: function() {
-		this.set("x", this.get("x") + this.get("speedX"));
-		this.set("y", this.get("y") + this.get("speedY"));
+		this.set("x", this.get("x") + this.get("speedX"), {silent:true});
+		this.set("y", this.get("y") + this.get("speedY"), {silent:true});
 	},
 	
 	changeSpeedBy: function(modulus, direction) {
-		this.set("speedX", this.get("speedX") + dotProduct(direction, [1,0]) * modulus);
-		this.set("speedY", this.get("speedY") + dotProduct(direction, [0,1]) * modulus);
+		var dateO= new Date();
+		var timeO = dateO.getTime();
+		this.set("speedX", this.get("speedX") + dotProduct(direction, [1,0]) * modulus, {silent:true});
+		this.set("speedY", this.get("speedY") + dotProduct(direction, [0,1]) * modulus, {silent:true});
+		var dateF = new Date();
+		var timeF = dateF.getTime();
+		//~ console.log("Speed change Time");
+		//~ console.log(timeF - timeO);
 	},
 	
 	getVectorPos: function() {
@@ -110,17 +118,17 @@ physicsEngine.Ball = Backbone.Model.extend({
 	
 	getAttr: function() {
 		 return [
-			{ "attr":"x",  			"value":this.get("x").toFixed(2), "type":"input", name: "X Position"},
-			{ "attr":"y",  			"value":this.get("y").toFixed(2), "type":"input", name: "Y Position"},
-			{ "attr":"speedX",  	"value":this.get("speedX").toFixed(2), "type":"input", name: "X Speed"},
-			{ "attr":"speedY",  	"value":this.get("speedY").toFixed(2), "type":"input", name: "Y Speed"},
-			{ "attr":"mass",  		"value":this.get("mass").toFixed(2), "type":"input"},
-			{ "attr":"radius",  	"value":this.get("radius"), "type":"input"},
-			{ "attr":"bounciness",  "value":this.get("bounciness").toFixed(3), "type":"input"},
-			{ "attr":"friction", 	"value":this.get("friction").toFixed(3),"type":"input"},
+			{ "attr":"x",  			"value":this.get("x").toFixed(2), "type":"inputFloat", name: "X Position"},
+			{ "attr":"y",  			"value":this.get("y").toFixed(2), "type":"inputFloat", name: "Y Position"},
+			{ "attr":"speedX",  	"value":this.get("speedX").toFixed(2), "type":"inputFloat", name: "X Speed"},
+			{ "attr":"speedY",  	"value":this.get("speedY").toFixed(2), "type":"inputFloat", name: "Y Speed"},
+			{ "attr":"mass",  		"value":this.get("mass").toFixed(2), "type":"inputFloat"},
+			{ "attr":"radius",  	"value":this.get("radius"), "type":"inputFloat"},
+			{ "attr":"bounciness",  "value":this.get("bounciness").toFixed(3), "type":"inputFloat"},
+			{ "attr":"friction", 	"value":this.get("friction").toFixed(3),"type":"inputFloat"},
 			{ "attr":"trace", 		"value":this.get("trace"),"type":"bool"},
-			{ "attr":"containerId", "value":this.get("containerId"),"type":"input"},
-			{ "attr":"colour", 		"value":this.get("colour"), "type":"input"},
+			{ "attr":"containerId", "value":this.get("containerId"),"type":"inputFloat"},
+			{ "attr":"colour", 		"value":this.get("colour"), "type":"inputString"},
 		];
 	},
 	

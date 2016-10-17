@@ -8,11 +8,28 @@
 {% block content %}
 	<h1> Welcome </h1>
 	</br>
-	<p> Welcome to my website, built with the help of Django, jQuery, Backbone.js and HTMl5 Boilerplate. </p>
-	<p> I built this website with the hope of collating some of the projects I've worked on, as well as to learn about Web dev.</p>
-	<p> You can find the various projects in the nav bar on the left.</p>
+	<p> Welcome to my website! </p>
+	<p> I made this website in the summer of 2016 to learn about Web dev and with the hope of collating the projects I work on.</p>
+	<p> You can find my projects in the nav bar on the left.</p>
 	</br>
-	<p> Below is an example of one, a physics engine I've built in Javascript. 
+	<p> I built this website myself, with some help from the internet and using the following tools:</p>
+	<ul>
+		<li>Back End
+			<ul>
+				<li>Apache is running my Ubuntu server</li>
+				<li>Django (Python) is handling requests, hosted on Apache using the mod_wsgi module</li>
+			</ul>
+		</li>
+		<li>Front End
+			<ul>
+				<li>HTML5Boileplate, for setting up my base Django template</li>
+				<li>jQuery</li>
+				<li>Backbone.js is doing the front end on some of my web apps, like my <a href="{% url 'physics_engine:index' %}">Physics Engine</a></li>
+			</ul>
+		</li>
+	</ul>
+	</br>
+	<p> Below is an example of one of my projects, a physics engine I've built in Javascript. 
 		At the moment, there are particles that rebound according to the laws of momentum and springs that work according to Hooke's Law.
 		The simulation below is just an example, with a Newton cradle (including energy loss), a damped spring and some perfectly elastic particles at the bottom.</p>
 	</br>

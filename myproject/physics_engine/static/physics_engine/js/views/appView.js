@@ -7,7 +7,9 @@ physicsEngine.AppView = Backbone.View.extend({
 
 
 	events: {
+	  'click #physicsResetButton': 'resetCollections',
 	  'click .physicsEditHeadings': 'toggleSelectedHeading',
+	  'click #moveToEngine': 'scrollToCanvas',
 	},
 
 
@@ -21,13 +23,15 @@ physicsEngine.AppView = Backbone.View.extend({
 			physicsEngine.springs,
 			physicsEngine.containers,
 		];
-		// Building the links to the various routes
+		// Building the headings that link to the various routes
 		for (var i=0; i < collections.length; i++) {
  			var heading  = $(document.createElement('a'));
+ 			// Pick the current heading depending on the current filter
 			if ( ( (!physicsEngine.editFilter) && (i==0) ) || ( (physicsEngine.editFilter) && ((physicsEngine.editFilter === collections[i].name)) ) ) {
 				heading.addClass("physicsEditHeadingSelected");
 				this.currentHeading = heading;
 			}
+			// Fill up and add the headings
  			heading.attr("href", "#".concat(collections[i].name));
 			heading.addClass("physicsEditHeadings");
 			heading.html(collections[i].name);
@@ -40,10 +44,16 @@ physicsEngine.AppView = Backbone.View.extend({
 		for (var i=0; i < collections.length; i++) {
 			var editView = new physicsEngine.EditView(collections[i]);
 			uiDiv.append(editView.$el);
+			// Hiding it if not equal to the current filter
 			if (!( ( (!physicsEngine.editFilter) && (i==0) ) || ( (physicsEngine.editFilter) && ((physicsEngine.editFilter === collections[i].name)) ) )) {
 				editView.$el.hide();
 			}
 		}
+		this.moveToTopButton  = $(document.createElement('button'));
+		this.moveToTopButton.attr("id", "moveToEngine");
+		this.moveToTopButton.html( "Return To Simulation" );
+		uiDiv.append(this.moveToTopButton); 
+		
 		$("#physicsEngine").append(uiDiv);
 		
 		$(".physicsEditHeadings").css('cursor', 'pointer');
@@ -51,24 +61,97 @@ physicsEngine.AppView = Backbone.View.extend({
 		this.render();
 	},
 
+	// Render the canvas for the first time
 	render: function() {
 		this.canvasView.render();
 	},
 	
+	// Toggles class change when a different heading is selected
 	toggleSelectedHeading: function(evt) {
 		this.currentHeading.removeClass("physicsEditHeadingSelected");
 		this.currentHeading = $(evt.target);
 		this.currentHeading.addClass("physicsEditHeadingSelected");
 	},
-
+	
+	scrollToCanvas: function() {
+		this.canvasView.$el.get(0).scrollIntoView();
+	},
+	
+	resetCollections: function() {
+		physicsEngine.balls.reset();
+		physicsEngine.springs.reset();
+		physicsEngine.containers.reset();
+		physicsEngine.containers.add([new physicsEngine.Container({"id":physicsEngine.containers.nextId()})]);
+	},
 });
 
 
-physicsEngine.balls.add(new physicsEngine.Ball({x:150, y:150, mass:1, speedX: 0, friction: 0, bounciness:0.5, id:physicsEngine.balls.nextId()}));
-physicsEngine.balls.add(new physicsEngine.Ball({x:250, y:150, mass:1, speedX: 0, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
-physicsEngine.balls.add(new physicsEngine.Ball({x:450, y:150, mass:1, speedX: 0, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
-physicsEngine.springs.add({point1:1, point2:2, length:100, k:0.0005, id:1});
-console.log(physicsEngine.balls.get(2));
+// EXAMPLE/TEST CASES
+// CUBE
+
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:250, y:150, mass:1, speedX: 3, speedY:-2, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:350, y:150, mass:1, speedX: 3, speedY:2, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:350, y:250, mass:1, speedX: -1, speedY:2, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:250, y:250, mass:1, speedX: -1, speedY:-2, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:300, y:200, mass:1, speedX: 1, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:250, y:150, mass:1, speedX: 2, speedY:0, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:350, y:150, mass:1, speedX: 2, speedY:0, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:350, y:250, mass:1, speedX: 2, speedY:0, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:250, y:250, mass:1, speedX: 2, speedY:0, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:300, y:200, mass:1, speedX: 2, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+//~ physicsEngine.springs.add({point1:1, point2:2, length:100, dampening: 1, k:0.8, id:1, colour:"#0000FF"});
+//~ physicsEngine.springs.add({point1:2, point2:3, length:100, dampening: 1, k:0.8, id:2, colour:"#0000FF"});
+//~ physicsEngine.springs.add({point1:3, point2:4, length:100, dampening: 1, k:0.8, id:3, colour:"#0000FF"});
+//~ physicsEngine.springs.add({point1:4, point2:1, length:100, dampening: 1, k:0.8, id:4, colour:"#0000FF"});
+//~ physicsEngine.springs.add({point1:1, point2:5, length:50*Math.pow(2, 0.5), k:0.1*Math.pow(2, 0.8), dampening: 1, id:5, colour:"#0000FF"});
+//~ physicsEngine.springs.add({point1:2, point2:5, length:50*Math.pow(2, 0.5), k:0.1*Math.pow(2, 0.8), dampening: 1, id:6, colour:"#0000FF"});
+//~ physicsEngine.springs.add({point1:3, point2:5, length:50*Math.pow(2, 0.5), k:0.1*Math.pow(2, 0.8), dampening: 1, id:7, colour:"#0000FF"});
+//~ physicsEngine.springs.add({point1:4, point2:5, length:50*Math.pow(2, 0.5), k:0.1*Math.pow(2, 0.8), dampening: 1, id:8, colour:"#0000FF"});
+//~ physicsEngine.balls.add(new physicsEngine.Ball({x:500, y:200, mass:1, speedX: 0, friction: 0, bounciness:0.1, id:physicsEngine.balls.nextId()}));
+
+// RIGID ROTATOR
+
+function Scenario1() {
+	physicsEngine.balls.add(new physicsEngine.Ball({x:350, y:150, mass:1, speedX: -1, speedY:0, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.balls.add(new physicsEngine.Ball({x:450, y:150, mass:1, speedX: 0, speedY:0, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.springs.add({point1:1, point2:2, length:100, dampening: 0.999, k:950, id:1, colour:"#0000FF"});
+
+	physicsEngine.balls.add(new physicsEngine.Ball({x:150, y:150, mass:1, speedX: 0, speedY:0, friction: 0, trace: true, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.balls.add(new physicsEngine.Ball({x:250, y:150, mass:1, speedX: 0, speedY:0, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.springs.add({point1:3, point2:4, length:100, dampening: 0.999, k:950, id:2, colour:"#0000FF"});
+
+	physicsEngine.balls.add(new physicsEngine.Ball({x:150, y:350, mass:1, speedX: 1, speedY:1, friction: 0, trace: true, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.balls.add(new physicsEngine.Ball({x:250, y:350, mass:1, speedX: 1, speedY:-1, friction: 0, trace: true, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.springs.add({point1:5, point2:6, length:100, dampening: 0.999, k:950, id:3, colour:"#0000FF"});
+}
+
+function Scenario2() {
+	physicsEngine.g = 0.045;
+	var pendulumX = 550;
+	var pendulumLength = 130;
+	var pendulumK = 0.0007;
+	physicsEngine.balls.add(new physicsEngine.Ball({x:pendulumX, y:40+pendulumLength, mass:1, speedX: 0, speedY:1, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.springs.add({point1:1, point2:[pendulumX, 40], length:pendulumLength, dampening: 0, k:pendulumK, id:physicsEngine.springs.nextId(), });
+	var cradleX = 250;
+	var cradleLength = 150;
+	var cradleRadius = 10;
+	var cradleN = 5;
+	for (var i =0; i < cradleN; i++) {
+		var ballId = physicsEngine.balls.nextId();
+		let speed = 0;
+		if (i===0) {speed=-1;}
+		physicsEngine.balls.add(new physicsEngine.Ball({x:cradleX+i*2*cradleRadius, y:40+cradleLength, mass:1, radius: cradleRadius, speedX: speed, speedY:0, friction: 0, bounciness:1, id:ballId}));
+		physicsEngine.springs.add({point1:ballId, point2:[cradleX+i*2*cradleRadius, 40], length:cradleLength, dampening: 0.999, k:950, id:physicsEngine.springs.nextId(), });		
+	}
+	physicsEngine.canvasView.fillRandomly(60, 450, 620, 495, 25, {speedY:-1.5});
+}
+
+Scenario2();
+
+//
+
+
 //~ for (var i =0; i<80; i++) {
 	//~ var radius = 2;
 	//~ var ball = new physicsEngine.Ball( {x:120 + i*(1.44*radius), y:200+i*1.44*radius, mass:10000, radius: radius, friction:1} );
@@ -87,15 +170,43 @@ console.log(physicsEngine.balls.get(2));
 new physicsEngine.AppView(); // kick things off
 
 // TODO:
-// Consideer moving actionSpring() to canvasView in the interest of not having the spring alter another collection. This way we can also ignore
-// springs that are improperly set easily.
+
+// Tastypie, serve examples by serving the ball/spring/container collections and some text that has been saved into it. That way can set up the example and save it to the server (and add text later)
+// Question would be how to allow only me to do this. Could just do it on local server and take it out of the final version?? Would presumably need to change allowed_methods or something on the Django side
+// Other option is to set up users?	
+
+// Just put it up!!
+// Make it colourful
+// Energy being lost over time?
+// Have "Special" tab with just the ability to load the example scenario for now?
+
+// Should action spring be just before move? 
+// Have links to move up and down the page, probably need to do this in javascript rather than via anchors. Could have router deal with whole
+// thing since it's quite simple.
+// 
+// Move physicsEngine.g into physicsEngine.globalOptions so that it can be checked for change more easily
+// Have ability to collapse the stats on an editChildView, such that it runs faster
 // Have ability to choose update period (with caveat that it will make it slower)
-// Have ability to drag and drop on cavas if paused
-// Have a sideways dampening option too (friction at a pivot point for example)
+// Have ability to drag and drop ends of springs to other balls or to the background
+// Have extension showing for springs as it may be helpful as a stat? Would need to update it more often than actionSpring does
+//
+// Idea to save platform possibility: draw platforms as lines. If ball overlaps with line, reverse ball speed in direction along perpendicular to the line.
+// Platform could have friction too. Would need to make it so that balls that are dropped near platforms just stick straight onto them.
+// Look at solving y=mx+c with x^2+y^2=r^2 equations, some translations and checking of platform boundaries might be needed. Might be worth working in a grid in the future,
+// for now doing it normally is fine (platform number will be low).
+// Once we have platforms, do we still  need containers?
+//
+// Have ability to graph things, would be quite easy. Either an individual thing over time or many things binned (e.g. for M-B dist).
+// Can choose an update period for the graph, but could do a simple thing where individual lines are drawn in at each update, until
+// one of them goes over the 
 
 // FUTURE:
-// Making platforms: use series of small balls that have a friction of 1 and a very large mass
-// NB: surely it's faster to do a sort on the balls by x then save that. Then for any given ball, find those other balls nearby in x,
-// then do a sort on those in y and choose the nearby ones in y, then do the collision test with those. Maybe not faster, since the bins lookups are faster than binary search.
-// Get a kick working, and diffrentiate it from a drag
+// - Special objects could include:
+// cannons, bombs, hooks (on the end of springs, with their own fail points?), pulleys (rods with a speed and acceleration depending on that of the points
+// - Could use grid to simulate water movement via an 1/r^2 force? Could use Barnes-Hut type thing with a softening. 
+// Could simulate things like water tension on a cup, water going down a slope to fill a container, ect...
 
+// WEBSITE TODO:
+// Create users
+// Posts/Comments page (+later ability to edit posts)
+// Then ability to save physics engine using tastypie

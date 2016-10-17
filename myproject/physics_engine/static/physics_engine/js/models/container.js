@@ -13,10 +13,10 @@ physicsEngine.Container = Backbone.Model.extend({
 	
 	getAttr: function() {
 		 return [
-			{ "attr":"xMin", "value":this.get("xMin"), "type":"input"},
-			{ "attr":"xMax", "value":this.get("xMax"), "type":"input"},
-			{ "attr":"yMin", "value":this.get("yMin"), "type":"input"},
-			{ "attr":"yMax", "value":this.get("yMax"), "type":"input"},
+			{ "attr":"xMin", "value":this.get("xMin"), "type":"inputFloat"},
+			{ "attr":"xMax", "value":this.get("xMax"), "type":"inputFloat"},
+			{ "attr":"yMin", "value":this.get("yMin"), "type":"inputFloat"},
+			{ "attr":"yMax", "value":this.get("yMax"), "type":"inputFloat"},
 		];
 	},
 

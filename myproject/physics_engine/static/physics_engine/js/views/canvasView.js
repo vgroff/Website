@@ -1,5 +1,6 @@
 var physicsEngine = physicsEngine || {};
 
+// The view used to display the canvas and do the physics
 physicsEngine.CanvasView = Backbone.View.extend({
 
 	// Instead of generating a new element, bind to the existing skeleton of
@@ -7,37 +8,58 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	el: '#physicsCanvas',
 	rendering: false,
 	playing: false,
+	selectedBall: null,
+	speedToPixel: 10,
 	
 	events: {
 		'mousedown': 'userInteract',
 	},
 
-	
+	// Setting up listeners
 	initialize: function() {
 		this.self = this;
 		this.listenTo(physicsEngine.optionsView, 'togglePlay', this.togglePlay);
 		this.listenTo(physicsEngine.optionsView, 'stepAnimation', this.step);
 		this.listenTo(physicsEngine.balls, 'change', this.render);
 		this.listenTo(physicsEngine.balls, 'add', this.render);
+		this.listenTo(physicsEngine.balls, 'remove', this.render);
 		this.listenTo(physicsEngine.springs, 'change', this.render);
 		this.listenTo(physicsEngine.springs, 'add', this.render);
+		this.listenTo(physicsEngine.springs, 'remove', this.render);
 		this.listenTo(physicsEngine.containers, 'change', this.render);
 		this.listenTo(physicsEngine.containers, 'add', this.render);
+		this.listenTo(physicsEngine.containers, 'remove', this.render);
+		this.listenTo(this, "render", this.render);
 	},
 	
+	// Draws to canvas
 	render: function(applyPhysics) {
+		if (physicsEngine.log) { console.log("redrawing canvas"); }
 		this.drawAll();
 	},
 	
+	// Recursive function that runs the engine, doing the physics then drawing. It then calls itself depending on the this.playing variable.
 	animate: function() {
 		if (this.rendering === false) {
 			var date = new Date();
 			var time = date.getTime();
 			this.rendering = true;
-			
+			// Do the physics
 			this.applyPhysics();
+			if (physicsEngine.log) {
+				var date1 = new Date();
+				console.log("Physics Time:");
+				console.log(date1.getTime()-time);
+			}
+			// Draw to canvas
 			this.render();
-			
+			if (physicsEngine.log) {
+				var date2 = new Date();
+				console.log("Draw Time:");
+				console.log(date2.getTime() - date1.getTime());
+			}
+
+			// Calibrate to correct FPS
 			date = new Date();
 			if (this.playing === true) {
 				if ( date.getTime() - time < physicsEngine.fps) {
@@ -51,20 +73,29 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		}	
 	},
 	
+	// Toggle the playing variable and start the animate function if necessary
 	togglePlay: function() {
 		this.playing = !this.playing;
-		if (this.playing) { this.animate();}
+		if (this.playing) { 
+			this.animate();
+			this.selectedBall = null;
+		}
 	},
 	
+	// If paused, runs the animate function (which will only run once due to the fact it is paused)
 	step: function() {
 		if (!this.playing) {
 			this.animate();
 		}
 	},
 	
+	// Does the physics calculations at time t
 	applyPhysics: function() {
 		// Do all velocity calcs first, then move, then do collisions
 		var self = this;
+		if (self.userSpring) {
+			self.actionSpring(self.userSpring);
+		}
 		physicsEngine.springs.forEach( function(spring) {
 			self.actionSpring(spring);
 		});
@@ -76,46 +107,72 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		this.applyCollisions();
 		physicsEngine.balls.forEach( function(ball) {
 			ball.applyContainer();
+			ball.trigger("updated");
 		});	
 		
 	},
 	
+	// Does the spring physics
 	actionSpring: function(spring) {
+		
 		let point1 = spring.get("point1");
 		let point2 = spring.get("point2");
-		
+		var points = 0;
+		// Setting up depending on if there are 1 or 2 balls
 		if ( point1 instanceof Array ) {
 			var vector = point1;
+			var speed = [0,0];
 		}
 		else {
 			point1 = physicsEngine.balls.get(point1);
 			if (!point1) { return; }
 			var vector = physicsEngine.balls.get(point1).getVectorPos();
+			var speed  = physicsEngine.balls.get(point1).getVectorSpeed();
+			points += 1;
 		}	
 		if (point2 instanceof Array) {
 			var vector1 = point2;
+			var speed1 = [0,0];
 		}
 		else {
 			point2 = physicsEngine.balls.get(point2);
 			if (!point2) { return; }
 			var vector1 = physicsEngine.balls.get(point2).getVectorPos();
+			var speed1  = physicsEngine.balls.get(point2).getVectorSpeed();
+			points += 1;
 		}
+
 		var extension = distanceTo(vector, vector1) - spring.get("length");
-		spring.set("extension", extension);
+		spring.set("extension", extension, {silent:true});
 		let direction = spring.get("direction");	
+				
 		if ( (direction == "both") || (direction == "pull" && extension > 0) || (direction == "push" && extension < 0) ) {
+			// Changing the speeds due to extension
 			force = spring.get("k") * extension;
 			if ( !( point1 instanceof Array ) ) {
 				point1.changeSpeedBy(force/point1.get("mass"), directionTo(vector, vector1));
-				point1.changeSpeedBy(spring.get("dampening")*dotProduct(point1.getVectorSpeed(), directionTo(vector, vector1)), directionTo(vector1, vector));
+				speed  = physicsEngine.balls.get(point1).getVectorSpeed();
 			}	
+			
 			if ( !( point2 instanceof Array ) ) {
 				point2.changeSpeedBy(force/point2.get("mass"), directionTo(vector1, vector));
-				point2.changeSpeedBy(spring.get("dampening")*dotProduct(point2.getVectorSpeed(), directionTo(vector1, vector)), directionTo(vector, vector1));
+				speed1  = physicsEngine.balls.get(point2).getVectorSpeed();
+			}
+			// Changing the speeds due to dampening
+			var relativeSpeed = dotProduct([speed1[0]-speed[0], speed1[1]-speed[1]], directionTo(vector1, vector));
+			if ( !( point1 instanceof Array ) ) {
+				point1.changeSpeedBy(spring.get("dampening")*relativeSpeed/points, directionTo(vector1, vector));
+				speed  = physicsEngine.balls.get(point1).getVectorSpeed();
+			}	
+			
+			if ( !( point2 instanceof Array ) ) {
+				point2.changeSpeedBy(spring.get("dampening")*relativeSpeed/points, directionTo(vector, vector1));
+				speed1  = physicsEngine.balls.get(point2).getVectorSpeed();
 			}
 		}
-		//console.log(spring.extension);
-		if (spring.failPoint) {
+		
+		// Checks if fail point had passed
+		if (spring.get("failPoint")) {
 			if (extension	>= spring.get("failPoint")) {
 				spring.destroy();
 			}
@@ -123,6 +180,7 @@ physicsEngine.CanvasView = Backbone.View.extend({
 
 	},
 	
+	// Does the collision physicsby splitting the area into a grid as this is more efficient
 	applyCollisions: function() {
 		var numberOfRows = Math.floor(physicsEngine.balls.length / 100) + 1;
 		var numberOfRows = 13;
@@ -131,23 +189,26 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		var grid = [];
 		var extras = [];
 		var self = this;
+		// Building a grid
 		for (var i=0; i<numberOfRows; i++) {
 			grid.push([]);
 			for (var j=0; j<numberOfRows; j++) {
 				grid[i].push([[],[]]);
 			}
 		}
-		// Adding to the grid and secondary grid 
+		// Adding balls to the grid and secondary grid 
 		physicsEngine.balls.forEach( function(ball) {
-			ball.set("collided",[]);
+			// If the ball is too large to work in the grid, it goes in the extras pile
 			if ( (ball.get("radius") >= rowSeparation/2) || (ball.get("radius") >= colSeparation/2) ) {
 				extras.push(ball);
 			}
 			else {
 				let col = Math.floor(ball.get("x") / colSeparation);
 				let row = Math.floor(ball.get("y") / rowSeparation);
+				// Find where it is in the grid
 				if ((row>=0) && (row<numberOfRows) && (col<numberOfRows) && (col>=0)){
 					grid[row][col][0].push(ball);
+					// Cycle over nearby grids to see if there is any overlap, if so add it to the secondary grid
 					for (var i=-1; i<=1; i++) {
 						for (var j=-1; j<=1; j++) {
 							if (((i!==0) || (j!==0)) && (row+i>=0) && (row+i<numberOfRows) && (col+j<numberOfRows) && (col+j>=0)) {
@@ -163,9 +224,11 @@ physicsEngine.CanvasView = Backbone.View.extend({
 						}
 					}
 				}
+				else { extras.push(ball); }
 			}
 		});
-		// Possibly calculating some bounces twice, but this doesn't introduce extra energy so it doesn't really matter.
+		// Iterating over the primary grid, calculating collisions with all primary and secondary balls
+		// (In certain unlikley conditions, this may be calculating some bounces twice, but this doesn't introduce extra energy and is not physically incorrect so it doesn't matter physics-wise.)
 		for (var i=0; i<numberOfRows; i++) {
 			for (var j=0; j<numberOfRows; j++) {
 				for (var k=0; k<grid[i][j][0].length; k++) {
@@ -193,6 +256,7 @@ physicsEngine.CanvasView = Backbone.View.extend({
 				}
 			}
 		}
+		// Iterating extras with each other
 		for (var i=0; i<extras.length; i++) {
 			for (var l=0; l<extras.length; l++) {
 				let ball1 = extras[i];
@@ -204,6 +268,7 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		}
 	},
 	
+	// Check whether two balls are (physically) colliding or not (relative speed is in the collide function)
 	ballsColliding: function(ball1, ball2) {
 		if ( distanceTo(ball1.getVectorPos(), ball2.getVectorPos()) <= (ball1.get("radius") + ball2.get("radius")) ) {
 			return true;
@@ -211,15 +276,18 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		return false
 	},
 	
+	// Carry out the collision if necessary
 	collide: function(ball1, ball2) {
 		var vectorTo = directionTo(ball1.getVectorPos(), ball2.getVectorPos());
 		if ( (dotProduct(vectorTo, [ball1.get("speedX")-ball2.get("speedX"), ball1.get("speedY")-ball2.get("speedY")]) > 0) ) { 	
+			// Pick the higher bounciness (arbitrary)
 			if (ball1.get("bounciness") > ball2.get("bounciness")) {
 				var bounciness = ball1.get("bounciness");
 			}
 			else {
 				var bounciness = ball2.get("bounciness");
 			}
+			// Momentum conservation along direction of collision
 			var initSpeed1 = dotProduct(vectorTo, ball1.getVectorSpeed() );
 			var initSpeed2 = dotProduct(vectorTo, ball2.getVectorSpeed() );
 			let m1 = ball1.get("mass");
@@ -229,18 +297,18 @@ physicsEngine.CanvasView = Backbone.View.extend({
 			ball1.changeSpeedBy(-initSpeed1, vectorTo);
 			ball2.changeSpeedBy(-initSpeed2, vectorTo);
 			ball1.changeSpeedBy(finalSpeed1, vectorTo);
-			ball2.changeSpeedBy(finalSpeed2, vectorTo);
-			//~ var initE = 0.5 * (ball1.mass * Math.pow(initSpeed1, 2) + ball2.mass * Math.pow(initSpeed2, 2))	;
-			//~ var finalE = 0.5 * (ball1.mass * Math.pow(finalSpeed1, 2) + ball2.mass * Math.pow(finalSpeed2, 2));
-			
+			ball2.changeSpeedBy(finalSpeed2, vectorTo);			
 		}
 	},
 	
+	// Randomly fill an area with a certain number of balls
 	fillRandomly: function(x1, y1, x2, y2, number, ballProps) {
 		var successes= 0;
 		var successiveFailures = 0;
 		var balls = [];
-		var radius = ballProps["radius"] || physicsEngine.Balls.defaults["radius"];
+		let ball = new physicsEngine.Ball();
+		var radius = ballProps["radius"] || ball.get("radius");
+		// Stop if it seems impossible (2000 successive failures) otherwise continue until filled up
 		while ((successes < number) && (successiveFailures < 2000)){
 			var x = Math.random() * (x2 - x1) + x1;
 			var y = Math.random() * (y2 - y1) + y1;
@@ -254,49 +322,90 @@ physicsEngine.CanvasView = Backbone.View.extend({
 			if (!failed) {
 				successiveFailures = 0;
 				successes++;
-				physicsEngine.balls.add(new physicsEngine.Ball($.extend({}, ballProps, {x:x, y:y})));
+				physicsEngine.balls.add(new physicsEngine.Ball($.extend({}, ballProps, {x:x, y:y, id:physicsEngine.balls.nextId()})));
 			}
 		}
 	},
 	
+	// Deals with the various possibilities involved in user interaction with the canvas
 	userInteract: function(evt) {
 		var self = this.self;
 		var currentMousePos = [evt.pageX - this.$el.offset().left, evt.pageY- this.$el.offset().top];
 		var currentId = null;
 		var spring
-		physicsEngine.balls.forEach( function(ball) {	
-			if (distanceTo(currentMousePos, ball.getVectorPos()) <= ball.get("radius")  ){
-				var clickedBall = ball;
-				spring = new physicsEngine.Spring({point1:ball.get("id"), point2: currentMousePos, length:0, k:0.005*ball.get("mass"), dampening:0, id: physicsEngine.springs.nextId()});
-				physicsEngine.springs.add(spring);
-				var oldFriction = ball.get("friction");
-				ball.set("friction", 0.08);
-				self.$el.on("mouseup", function(evt) {
-					physicsEngine.springs.remove(spring);
-					ball.set("friction", oldFriction);
-					self.$el.off("mouseup");
-					self.$el.off("mousemouve");
-				});
-				self.$el.on("mousemove", function(evt) {
-					currentMousePos = [evt.pageX - self.$el.offset().left, evt.pageY- self.$el.offset().top];
-					spring.set("point2", currentMousePos);
-				});
-			} 
-		});
+		// If playing, create a spring to the clicked ball
+		if (this.playing) {
+			physicsEngine.balls.forEach( function(ball) {	
+				// if this is the clicked ball, create the spring
+				if (distanceTo(currentMousePos, ball.getVectorPos()) <= ball.get("radius")  ){
+					var clickedBall = ball;
+					spring = new physicsEngine.Spring({point1:ball.get("id"), point2: currentMousePos, length:0, k:0.005*ball.get("mass"), dampening:0, id: physicsEngine.springs.nextId()});
+					self.userSpring = spring;
+					var oldFriction = ball.get("friction");
+					ball.set("friction", 0.08, {silent:true});
+					// Get rid of the spring on releasing the mouse
+					self.$el.on("mouseup", function(evt) {
+						self.userSpring = null;
+						ball.set("friction", oldFriction, {silent:true});
+						self.$el.off("mouseup");
+						self.$el.off("mousemove");
+					});
+					// Move the spring on moving the mouse
+					self.$el.on("mousemove", function(evt) {
+						currentMousePos = [evt.pageX - self.$el.offset().left, evt.pageY- self.$el.offset().top];
+						self.userSpring.set("point2", currentMousePos, {silent:true});
+					});
+				} 
+			});
+		}
+		// Otherwise, move the balls around or change their speed
+		else {
+			var ballClicked = false;
+			var currentMousePos = [evt.pageX - self.$el.offset().left, evt.pageY- self.$el.offset().top];
+			physicsEngine.balls.forEach( function(ball) {
+				// If you've clicked a ball, it moves with your mouse
+				if (distanceTo(currentMousePos, ball.getVectorPos()) <= ball.get("radius")  ){
+					ballClicked = true;
+					self.selectedBall = ball;
+					self.trigger("render");
+					// Moving with the mouse
+					self.$el.on("mousemove", function(evt) {
+						currentMousePos = [evt.pageX - self.$el.offset().left, evt.pageY- self.$el.offset().top];
+						self.selectedBall.set("x", currentMousePos[0], {silent:true});
+						self.selectedBall.set("y", currentMousePos[1]);
+					});
+					self.$el.on("mouseup", function(evt) {
+						self.$el.off("mouseup");
+						self.$el.off("mousemove");
+					});
+				} 	
+			});
+			// If you haven't clicked a ball, but previously had one selected, change the speed of that ball
+			if ( (!ballClicked) && (self.selectedBall) )  {
+				self.selectedBall.set("speedX", (currentMousePos[0] - self.selectedBall.get("x"))/this.speedToPixel, {silent:true});
+				self.selectedBall.set("speedY", (currentMousePos[1] - self.selectedBall.get("y"))/this.speedToPixel);
+			}
+		}
 	},
 	
+	// Call the various drawing functions in the desired order
 	drawAll: function() {
 		let self = this;
 		physicsEngine.ctx.clearRect(0,0,physicsEngine.canvas.width, physicsEngine.canvas.height);
 		physicsEngine.springs.forEach( 		function(spring) {self.drawSpring(spring);} );
 		physicsEngine.balls.forEach( 		function(ball) {self.drawBall(ball);} );
 		physicsEngine.containers.forEach( 	function(cont) {self.drawContainer(cont);} );
+		if (this.userSpring) { this.drawSpring(this.userSpring); }
+		if (this.selectedBall) { this.highlightBall(this.selectedBall);}
 	},
 	
+	// Draw a ball
 	drawBall: function(ball) {
 		let ctx = physicsEngine.ctx;
+		// Draw circle
 		ctx.beginPath();
 		ctx.arc(ball.get("x"), ball.get("y"), ball.get("radius"), 0, Math.PI*2);
+		// Choose the colour and fill in the circile
 		if (physicsEngine.heatmap) {
 			var colours = ["#000000", "#6666AA", "#3333BB", "#0000FF", "#BB3333", "#FF0000"];//3333BB
 			var speeds = [0, 0.4, 0.8, 1.4, 1.8, 2.4];
@@ -315,6 +424,7 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		ctx.fill();
 		ctx.closePath();
 		
+		// Draw the trace of the movement if it exists
 		let traceArray = ball.get("traceArray");
 		
 		if (traceArray.length !== 0) {
@@ -328,17 +438,28 @@ physicsEngine.CanvasView = Backbone.View.extend({
 			ctx.stroke();
 			ctx.closePath();
 		}
-		
+		// If paused, draw the balls velocity
 		if (!this.playing) {
 			ctx.beginPath();
 			ctx.strokeStyle = "#000000";
 			ctx.moveTo(ball.get("x"), ball.get("y"));
-			ctx.lineTo(ball.get("x") + ball.get("speedX")*10, ball.get("y")+ball.get("speedY")*10);	
+			ctx.lineTo(ball.get("x") + ball.get("speedX")*this.speedToPixel, ball.get("y")+ball.get("speedY")*this.speedToPixel);	
 			ctx.stroke();
 			ctx.closePath();		
 		}
 	},
 	
+	// Used to highlight the ball clicked by the user if paused
+	highlightBall: function(ball) {
+		let ctx = physicsEngine.ctx;
+		ctx.beginPath();
+		ctx.strokeStyle = "#000000";
+		ctx.arc(ball.get("x"), ball.get("y"), ball.get("radius"), 0, Math.PI*2);
+		ctx.stroke();
+		ctx.closePath();
+	},
+	
+	// Draw a container
 	drawContainer: function(container) {
 		let ctx = physicsEngine.ctx;
 		ctx.beginPath();
@@ -353,8 +474,29 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		ctx.closePath();
 	},
 
+	// Draw a spring
 	drawSpring: function(spring) {
 		try {
+			let point1 = spring.get("point1");
+			let point2 = spring.get("point2");
+			
+			if ( point1 instanceof Array ) {
+				var vector = point1;
+			}
+			else {
+				point1 = physicsEngine.balls.get(point1);
+				if (!point1) { return; }
+				var vector = physicsEngine.balls.get(point1).getVectorPos();
+			}	
+			if (point2 instanceof Array) {
+				var vector1 = point2;
+			}
+			else {
+				point2 = physicsEngine.balls.get(point2);
+				if (!point2) { return; }
+				var vector1 = physicsEngine.balls.get(point2).getVectorPos();
+			}
+			var extension = distanceTo(vector, vector1) - spring.get("length");
 			let ctx = physicsEngine.ctx;
 			ctx.beginPath();
 			if (spring.get("colour") == "strengthMap") {
@@ -362,14 +504,14 @@ physicsEngine.CanvasView = Backbone.View.extend({
 				var forces  = [0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14];
 				var max = 0;
 				for (var i=0; i<forces.length; i++) {
-					if ( Math.abs(spring.get("extension")*spring.get("k")) >= forces[i] ) {
+					if ( Math.abs(extension*spring.get("k")) >= forces[i] ) {
 						max = i;
 					}
 				}
 				ctx.strokeStyle = colours[max];
 			}
 			else {
-				ctx.strokeStyle = spring.coloured;
+				ctx.strokeStyle = spring.get("colour");
 			}
 			ctx.lineWidth = 2;
 			if (spring.get("point1") instanceof Array) {

@@ -4,11 +4,14 @@
 {% block content %}
 <h1>Other Projects</h1>
 <p>This where I am holding other (non web-based) projects.</p>
-<p>This website is recent (Summer 2016), so I have yet to find all of my past projects, many of them buried throughout various hard drives, but I hope this will be a way of storing them.</p>
+<p>This website is recent (Summer 2016), so I have yet to find most of my past projects, many of them buried throughout various hard drives, but I hope this will be a way of storing them.</p>
 <p>You can download them and have a look at them yourself:</p>
 <ul>
 	{% for project in project_list %}
 		<li><a href="{% url 'other_projects:download_project' project.id %}"> {{ project.project_name }}</a></li>
+		<ul>
+			<li> Description: {{ project.project_description }} </li>
+		</ul>
 	{% endfor %}
 </ul>
 

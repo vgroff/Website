@@ -8,10 +8,10 @@ from .models import Project
 
 class ProjectAdmin(admin.ModelAdmin):
     fieldsets = [
-        (None,               {'fields': ['project_name']}),
+        (None,               {'fields': ['project_name', 'project_description']}),
         ('Path', {'fields': ['project_path']}),
     ]
     list_display = ('project_name', 'project_path') #  What shows in the list of questions
-    search_fields = ['projectName']	
+    search_fields = ['project_name']	
 
 admin.site.register(Project, ProjectAdmin)

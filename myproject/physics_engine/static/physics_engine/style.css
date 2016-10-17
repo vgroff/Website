@@ -8,21 +8,40 @@ canvas {
 	box-shadow: 0px 0px 25px #111111;
 }
 
+/* OPTIONS */
+
 #physicsEngineOptions {
 	width: 85%;
 	margin: 0 auto;
 	padding: 30px 0px 30px 0px;
 }
 
-.physicsEngineOptions {
+#physicsEngineOptions .physicsEngineOptions {
 	padding: 10px 70px 10px 70px;
-	margin: 10px;
+	margin: 10px 35px 40px 35px;
+	margin-bottom: 20px;
+	display: inline;
 }
 
-.physicsEngineOptions:hover {
-	cursor: hand;
-	cursor: pointer;
+#physicsEngineOptions #physicsGOption{
+	margin-right: 0px;
+	padding: 0px 5px 0px 5px;
 }
+
+#physicsGOption > *{
+	display: inline;
+}
+
+#physicsGOption > input{
+	max-width: 45px;
+}
+
+#physicsEngineOptions #physicsResetButton {
+	margin: 0 auto;
+	display: block;
+}
+
+/* HEADINGS/DIVS + addnew button */
 
 .physicsEditHeadings{
 	text-decoration: none;
@@ -39,11 +58,12 @@ canvas {
 }
 
 #physicsEngineUI {
+	background-color:#9b59b6;
+	padding-bottom: 20px;
 }
 
 .physicsEditingSection {
-	background-color:#9b59b6;
-	padding: 20px 20px 30px 40px;
+	padding: 20px 40px 30px 40px;
 }
 
 .physicsEditingSection .addNew {
@@ -51,6 +71,8 @@ canvas {
 	padding: 8px 20px 8px 20px;
 	margin: 0 auto;
 }
+
+/* CHILD VIEWS + COLUMNS */
 
 .physicsEditViews {
     padding: 0;
@@ -96,12 +118,20 @@ canvas {
     margin: 0;
 }
 
-
 .physicsEditViews .toggleEdit {
-	display: block;
+	display: inline;
 	padding: 2px 15px 2px 15px;
 }
 
+.physicsEditViews .deleteChild {
+	display: inline;
+	padding: 2px 15px 2px 15px;
+}
 
+#physicsEngineUI #moveToEngine {
+	padding: 15px 30px 15px 30px;
+	display:block;
+	margin: 0 auto;
+}
 
 

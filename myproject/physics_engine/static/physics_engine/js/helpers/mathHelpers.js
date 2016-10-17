@@ -6,7 +6,12 @@ function distanceTo(vector, vector1) {
 // Returns the unit vector direction between two points
 function directionTo(vector, vector1) {
 	var modulus = distanceTo (vector, vector1);
-	return [ (vector1[0] - vector[0]) / modulus, (vector1[1] - vector[1]) / modulus];
+	if (modulus) {
+		return [ (vector1[0] - vector[0]) / modulus, (vector1[1] - vector[1]) / modulus];
+	}
+	else {
+		return [0,0];
+	}
 }
 
 // Returns the modulus of a vector

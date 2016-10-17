@@ -10,12 +10,14 @@ physicsEngine.OptionsView = Backbone.View.extend({
 	events: {
 	  'click #physicsPlayButton': 'togglePlay',
 	  'mousedown #physicsStepButton': 'triggerStep',
-	  'mouseup #physicsStepButton': 'triggerStep'
+	  'mouseup #physicsStepButton': 'triggerStep',
+	  'keypress #physicsGOption': 'setG',
 	},
 
 	
 	initialize: function() {
 		this.$playButton = $('#physicsPlayButton');  
+		$("#physicsGOption > input").val(physicsEngine.g);
 		this.listenTo(this.model, "change", this.render);
 	},
 	
@@ -28,7 +30,7 @@ physicsEngine.OptionsView = Backbone.View.extend({
 			this.$playButton.html("Pause");
 			this.trigger("togglePlay");
 		}
-		
+		$("#physicsGOption > input").val(physicsEngine.g);
 	},
 	
 	togglePlay: function() {
@@ -48,6 +50,12 @@ physicsEngine.OptionsView = Backbone.View.extend({
 			setTimeout(this.triggerStep.bind(this), physicsEngine.fps*3, {});
 		}
 	},
+	
+	setG: function(evt) {
+		if (evt.key === "Enter") {
+			physicsEngine.g = parseFloat( $(evt.target).val().trim() );
+		}
+	}
 });
 
 physicsEngine.globalOptions = new physicsEngine.Options();

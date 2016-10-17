@@ -1,5 +1,6 @@
 var physicsEngine = physicsEngine || {};
 
+// The view for a given collection
 physicsEngine.EditView = Backbone.View.extend({
 
 	// Instead of generating a new element, bind to the existing skeleton of
@@ -7,7 +8,6 @@ physicsEngine.EditView = Backbone.View.extend({
 
 	events: {
 		"click .addNew": "addOne",
-		"click .toggleEdit": "toggleEditMode",
 	},
 
 	
@@ -16,21 +16,11 @@ physicsEngine.EditView = Backbone.View.extend({
 		this.editing = false;
 		
 		this.collection = collection;
-		this.$el.addClass("physicsEditingSection");
+		this.$el.addClass("physicsEditingSection");   
 		
-		this.editModeButton  = $(document.createElement('button'));
-		this.editModeButton.addClass(".toggleEdit");
-		this.editModeButton.html( "Toggle Editing Mode" );
+		this.render();
 		
-		collection.forEach( function(childModel) {
-			let childView = new physicsEngine.editChildView({model:childModel});
-			self.$el.append(childView.$el);
-		});		
-		
-		this.addNewButton  = $(document.createElement('button'));
-		this.addNewButton.addClass("addNew");
-		this.addNewButton.html( "Add Another ".concat(collection.nameModel) );
-		this.$el.append(this.addNewButton);   
+		this.listenTo(this.collection, "reset", this.removeChildViews);
 		
 		this.listenTo(physicsEngine.physicsRouter, "routed", this.toggleVisibility);
 		
@@ -38,30 +28,61 @@ physicsEngine.EditView = Backbone.View.extend({
 	},
 	
 	render: function() {
-			
+		var self = this;
+		
+		this.addNewButtonTop  = $(document.createElement('button'));
+		this.addNewButtonTop.addClass("addNew");
+		this.addNewButtonTop.html( "Add Another ".concat(this.collection.nameModel) );
+		this.$el.append(this.addNewButtonTop);  
+		
+		this.collection.forEach( function(childModel) {
+			childModel.set("name", self.collection.nameModel);
+			let childView = new physicsEngine.editChildView({model:childModel});
+			self.$el.append(childView.$el);
+			self.listenTo(childModel, "removeModel", self.removeModel);
+		});		
+		
+		this.addNewButtonBottom  = $(document.createElement('button'));
+		this.addNewButtonBottom.addClass("addNew");
+		this.addNewButtonBottom.html( "Add Another ".concat(this.collection.nameModel) );
+		this.$el.append(this.addNewButtonBottom);
 	},
 	
+	// Renders a new child model when added to collection
 	renderOne: function(model) {
-		this.addNewButton.remove();
+		this.addNewButtonBottom.remove();
 		let childView = new physicsEngine.editChildView({model:model});
 		this.$el.append(childView.$el);	
-		this.$el.append(this.addNewButton);		
+		childView.$el.get(0).scrollIntoView();
+		this.$el.append(this.addNewButtonBottom);		
 	},
 	
+	// Adds a model to the collection
 	addOne: function() {
-		this.collection.add( new this.collection.model({"id": this.collection.nextId()}) );
+		let childModel = new this.collection.model({"id": this.collection.nextId()});
+		childModel.set("name", this.collection.nameModel);
+		this.collection.add( childModel );
 	},
 	
+	// Hides itself if not on the right heading
 	toggleVisibility: function() {
 		if (physicsEngine.editFilter === this.collection.name) {
-			console.log("showing ".concat(this.collection.name));
 			this.$el.show();
 		}
 		else {
 			this.$el.hide();
 		}
 	},
-
+	
+	// Deletes a child from the collection
+	removeModel: function(childModel) {
+		this.collection.remove(childModel);
+	},
+	
+	removeChildViews: function() {
+		this.$el.empty();
+		this.render();
+	},
 
 });
 
