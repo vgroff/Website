@@ -61,6 +61,7 @@ physicsEngine.EditView = Backbone.View.extend({
 	addOne: function() {
 		let childModel = new this.collection.model({"id": this.collection.nextId()});
 		childModel.set("name", this.collection.nameModel);
+		this.listenTo(childModel, "removeModel", self.removeModel);
 		this.collection.add( childModel );
 	},
 	

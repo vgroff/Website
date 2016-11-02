@@ -38,6 +38,7 @@ physicsEngine.Ball = Backbone.Model.extend({
 			var yLimits = [container.get("yMin"), container.get("yMax")];
 		}
 		else {
+			return;
 			var xLimits = [-5000, 5000];
 			var yLimits = [-5000, 5000];
 		}
@@ -49,7 +50,7 @@ physicsEngine.Ball = Backbone.Model.extend({
 			// Check for collision with sides
 			if ( (y + radius >= yLimits[1]) && (speedY > 0) ) {
 				var overlap = y + radius - yLimits[1];
-				speedY = speedY + 1.00150*g * (speedY - overlap)/speedY; //1.00107
+				speedY = speedY + 1.00120*g * (speedY - overlap)/speedY; //1.00107
 				speedY = -1 * bounciness * speedY;
 				y = yLimits[1] - radius;
 			}
@@ -90,6 +91,74 @@ physicsEngine.Ball = Backbone.Model.extend({
 		let speedX = this.get("speedX");
 		let speedY = this.get("speedY");
 		this.changeSpeedBy(this.get("friction")*modulus([speedX, speedY]), directionTo([speedX, speedY], [0,0])); 
+	},
+	
+	applyRamp: function(ramp) {
+		ballPos = this.getVectorPos();
+		endPositions = ramp.getVectorPositions();
+		vectorAlong = [endPositions[1][0] - endPositions[0][0], endPositions[1][1] - endPositions[0][1]]
+		rampLength = modulus(vectorAlong); 
+		unitVectorAlong = scale(vectorAlong, 1/rampLength);
+		unitVectorPerp = [-1*unitVectorAlong[1], unitVectorAlong[0]];
+		vectorTo = [ ballPos[0] - endPositions[0][0], ballPos[1] - endPositions[0][1] ];
+		distanceAlong = dotProduct(vectorTo, unitVectorAlong);
+		distancePerp = dotProduct(vectorTo, unitVectorPerp);
+		velPerp = dotProduct(this.getVectorSpeed(), unitVectorPerp);
+		if (distanceAlong > 0 && distanceAlong < rampLength) {
+			if ( Math.abs(distancePerp) <= this.get("radius") ) {
+				if ( velPerp !== 0 && distancePerp / velPerp < 0) {
+					this.changeSpeedBy(-velPerp, unitVectorPerp);
+					this.changeSpeedBy(-velPerp*this.get("bounciness"), unitVectorPerp);
+				}
+			}
+		}
+	},
+
+	touchingRamp: function(ramp) {
+		ballPos = this.getVectorPos();
+		endPositions = ramp.getVectorPositions();
+		vectorAlong = [endPositions[1][0] - endPositions[0][0], endPositions[1][1] - endPositions[0][1]]
+		rampLength = modulus(vectorAlong); 
+		unitVectorAlong = scale(vectorAlong, 1/rampLength);
+		unitVectorPerp = [-1*unitVectorAlong[1], unitVectorAlong[0]];
+		vectorTo = [ ballPos[0] - endPositions[0][0], ballPos[1] - endPositions[0][1] ];
+		distanceAlong = dotProduct(vectorTo, unitVectorAlong);
+		distancePerp = dotProduct(vectorTo, unitVectorPerp);
+		velPerp = dotProduct(this.getVectorSpeed(), unitVectorPerp);
+		if (distanceAlong > 0 && distanceAlong < rampLength) {
+			if ( Math.abs(distancePerp) <= this.get("radius") ) {
+				if ( velPerp !== 0 && distancePerp / velPerp < 0) {
+					return true;
+				}
+			}
+		}
+		return false;
+	},
+	
+	placeOnRamp: function(ramp) {
+		ballPos = this.getVectorPos();
+		endPositions = ramp.getVectorPositions();
+		vectorAlong = [endPositions[1][0] - endPositions[0][0], endPositions[1][1] - endPositions[0][1]]
+		rampLength = modulus(vectorAlong); 
+		unitVectorAlong = scale(vectorAlong, 1/rampLength);
+		unitVectorPerp = [-1*unitVectorAlong[1], unitVectorAlong[0]];
+		vectorTo = [ ballPos[0] - endPositions[0][0], ballPos[1] - endPositions[0][1] ];
+		distanceAlong = dotProduct(vectorTo, unitVectorAlong);
+		distancePerp = dotProduct(vectorTo, unitVectorPerp);
+		velPerp = dotProduct(this.getVectorSpeed(), unitVectorPerp);
+		if (distanceAlong > 0 && distanceAlong < rampLength) { 
+			pointAlong = scale(unitVectorAlong, distanceAlong); 
+		}
+		else{
+			pointAlong = [0,0];
+		}
+		pointPerp = scale(unitVectorPerp, this.get("radius"));
+		// Put it the "right way up"
+		if (pointPerp[1] > 0) {
+			pointPerp = scale(pointPerp, -1);
+		}
+		this.set("x", endPositions[0][0] + pointAlong[0] + pointPerp[0]);
+		this.set("y", endPositions[0][1] + pointAlong[1] + pointPerp[1]);
 	},
 	
 	move: function() {

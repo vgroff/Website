@@ -12,14 +12,15 @@
 	<p> As a physicist, I thought it might be interesting to see what phenomena I might be able to demonstrate using a simple physics engine. </p>
 	<p> <em>Please note that while this works as is, it is still under construction. More examples, more functionality, the ability to save scenarios and mobile-friendliness are all in the works. </em> </p>
 	</br>
-	<p> For the moment, the engine runs using 3 objects: Balls, Springs and Containers. </p>
+	<p> For the moment, the engine runs using 4 objects: Balls, Springs, Ramps and Containers. </p>
 	<ul>
 		<li> Balls, which bounce off each other according to conservation of momentum and fall uniformly under gravity. Their velocity is shown as a black line when the engine is paused. </li>
 		<li> Springs, which have a restoring force proportional to their extension, i.e. the more stretched/compressed they are the harder they pull/push back (Hooke's Law). </li>
+		<li> Ramps, that the balls will bounce off.</li>
 		<li> Containers, which contain the balls within a certain area. Usually the main one is enough. Starting a ball outside of it's container can cause bizzare behaviour.</li>
 	</ul> 
-	<p> You can alter the settings of the engine objects in the purple area below, or by clicking and dragging the balls on the engine to change their position/speed. </p>
-	<p> Click on "Play" to start playing the simulation or hold down "Step" to step through it frame-by-frame. You can also interact with the engine while it is playing by click and dragging balls around. </p>
+	<p> You can add objects and alter their settings in the purple area below the engine, or by clicking and dragging the balls on the engine to change their position/speed. </p>
+	<p> Click on "Play" to start playing the simulation or hold down "Step" to step through it frame-by-frame. You can also interact with the engine while it is playing by click+dragging balls. </p>
 	</br>
 	<section id="physicsEngine">
 		<canvas id="physicsCanvas"></canvas>
@@ -30,6 +31,7 @@
 			<div id="physicsGOption" class="physicsEngineOptions"><p>g: &nbsp; </p><input><p>px/frame<sup>2</sup></p></div>
 			<button id="physicsResetButton" class="physicsEngineOptions">Reset All</button>
 		</div>
+		<div id="physicsEngineGraphingArea"></div>
 	
 	</section>
 	
@@ -73,7 +75,33 @@
 		<% } %>
 	</div>
 	</script>
+	
 
+
+	<script type="text/template" id="specialViewTemplate">	
+	</script>
+	
+	<script type="text/template" id="editViewTemplate">	
+	<h3> <%-collection["name"]%> </h3>
+	<em>This area is not entirely functional yet. For example, there is no way to delete graphs once created (you'll have to refresh)</em>
+	<button class="addNew">Add a new <%-collection["nameModel"]%></button>
+	</script>
+	
+	<script type="text/template" id="graphEditViewTemplate">	
+	<h4> <%-model.get("name")%> (<%- model.get("id") %>) </h4>
+	<ul>
+		<li>Balls: <%-model.get("plottingBalls")%> <input class="graphEditBalls"> </li>
+		<li>Plotting: <select class="graphTypeSelect"> <% for (var i=0; i < model.get("plottingOptions").length; i++) { %> 
+			<option value=<%-i%> ><%-model.get("plottingOptions")[i][0]%></option> 
+			<% } %> </select> <input class="graphEditDir graphEditDirX"><input class="graphEditDir graphEditDirY"> (leave empty for scalar)
+		</li>	
+	</ul>
+	</script>
+	
+	<script type="text/template" id="graphViewTemplate">	
+		<canvas class="graphCanvas" width="700" height="180"></canvas>
+	</script>
+	
 	{% endverbatim %}
 {% endblock %}
 
@@ -89,6 +117,7 @@
 	
 	<script src=" {% static 'physics_engine/js/helpers/mathHelpers.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/helpers/mainSetup.js' %} "></script>
+	
 	<script src=" {% static 'physics_engine/js/routers/physicsRouter.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/models/container.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/collections/containerList.js' %} "></script>
@@ -96,8 +125,15 @@
 	<script src=" {% static 'physics_engine/js/collections/ballList.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/models/spring.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/collections/springList.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/models/ramp.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/collections/rampList.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/editChildView.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/editView.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/models/graph.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/collections/graphList.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/views/graphEditView.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/views/graphView.js' %} "></script>
+	<script src=" {% static 'physics_engine/js/views/specialView.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/models/options.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/optionsView.js' %} "></script>
 	<script src=" {% static 'physics_engine/js/views/canvasView.js' %} "></script>

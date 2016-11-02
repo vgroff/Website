@@ -10,6 +10,8 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	playing: false,
 	selectedBall: null,
 	speedToPixel: 10,
+	averageFPS: 0,
+	i: 0,
 	
 	events: {
 		'mousedown': 'userInteract',
@@ -29,6 +31,9 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		this.listenTo(physicsEngine.containers, 'change', this.render);
 		this.listenTo(physicsEngine.containers, 'add', this.render);
 		this.listenTo(physicsEngine.containers, 'remove', this.render);
+		this.listenTo(physicsEngine.graphs, 'change', this.render);
+		this.listenTo(physicsEngine.graphs, 'add', this.render);
+		this.listenTo(physicsEngine.graphs, 'remove', this.render);
 		this.listenTo(this, "render", this.render);
 	},
 	
@@ -41,6 +46,7 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	// Recursive function that runs the engine, doing the physics then drawing. It then calls itself depending on the this.playing variable.
 	animate: function() {
 		if (this.rendering === false) {
+			this.i += 1;
 			var date = new Date();
 			var time = date.getTime();
 			this.rendering = true;
@@ -58,12 +64,21 @@ physicsEngine.CanvasView = Backbone.View.extend({
 				console.log("Draw Time:");
 				console.log(date2.getTime() - date1.getTime());
 			}
+			
+			// Plot graph points
+			physicsEngine.graphs.forEach( function(graph) {
+				graph.trigger("tick");
+			});
 
 			// Calibrate to correct FPS
 			date = new Date();
+			var instaFPS = date.getTime() - time;
+			var halfLife = 0.7;
+			this.averageFPS = halfLife * instaFPS + this.averageFPS * (1-halfLife)
+			if (physicsEngine.log) { if (this.i % 20 == 0) {console.log("AverageFPS");console.log(this.averageFPS);} }
 			if (this.playing === true) {
-				if ( date.getTime() - time < physicsEngine.fps) {
-					setTimeout(this.animate.bind(this), physicsEngine.fps - date.getTime() + time);
+				if ( instaFPS < physicsEngine.fps) {
+					setTimeout(this.animate.bind(this), physicsEngine.fps - instaFPS);
 				}
 				else {
 					setTimeout(this.animate.bind(this), 1);
@@ -106,6 +121,11 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		});	
 		this.applyCollisions();
 		physicsEngine.balls.forEach( function(ball) {
+			//~ var ball = ball;
+			//~ var self = self;
+			physicsEngine.ramps.forEach( function(ramp) {
+				ball.applyRamp(ramp);
+			});
 			ball.applyContainer();
 			ball.trigger("updated");
 		});	
@@ -196,37 +216,57 @@ physicsEngine.CanvasView = Backbone.View.extend({
 				grid[i].push([[],[]]);
 			}
 		}
-		// Adding balls to the grid and secondary grid 
-		physicsEngine.balls.forEach( function(ball) {
-			// If the ball is too large to work in the grid, it goes in the extras pile
-			if ( (ball.get("radius") >= rowSeparation/2) || (ball.get("radius") >= colSeparation/2) ) {
-				extras.push(ball);
+		// Adding balls to the grid and secondary grid
+		if (this.i % 2 == 0) {
+			var start = 0;
+			var end = physicsEngine.balls.last().get("id");
+		}
+		else {
+			var start = physicsEngine.balls.last().get("id");
+			var end = 0;			
+		}
+		var k = start; 
+		while (true){
+			var ball = physicsEngine.balls.get(k);
+			if (start > end) { 
+				k--;
+				if (k < end - 1) {break;}
 			}
-			else {
-				let col = Math.floor(ball.get("x") / colSeparation);
-				let row = Math.floor(ball.get("y") / rowSeparation);
-				// Find where it is in the grid
-				if ((row>=0) && (row<numberOfRows) && (col<numberOfRows) && (col>=0)){
-					grid[row][col][0].push(ball);
-					// Cycle over nearby grids to see if there is any overlap, if so add it to the secondary grid
-					for (var i=-1; i<=1; i++) {
-						for (var j=-1; j<=1; j++) {
-							if (((i!==0) || (j!==0)) && (row+i>=0) && (row+i<numberOfRows) && (col+j<numberOfRows) && (col+j>=0)) {
-								let x = (col+0.5+0.5*j)*colSeparation;
-								let y = (row+0.5+0.5*i)*rowSeparation;
-								if (i===0) { y =ball.get("y");}
-								if (j===0) { x = ball.get("x");}
-								var pos = ball.getVectorPos();
-								if ( ball.get("radius") >= distanceTo(ball.getVectorPos(), [x,y]) ) {
-									grid[row+i][col+j][1].push(ball);
+			if (end > start) {
+				 k++;
+				if (k > end + 1) {break;}
+			}
+			if (ball) {
+				// If the ball is too large to work in the grid, it goes in the extras pile
+				if ( (ball.get("radius") >= rowSeparation/2) || (ball.get("radius") >= colSeparation/2) ) {
+					extras.push(ball);
+				}
+				else {
+					let col = Math.floor(ball.get("x") / colSeparation);
+					let row = Math.floor(ball.get("y") / rowSeparation);
+					// Find where it is in the grid
+					if ((row>=0) && (row<numberOfRows) && (col<numberOfRows) && (col>=0)){
+						grid[row][col][0].push(ball);
+						// Cycle over nearby grids to see if there is any overlap, if so add it to the secondary grid
+						for (var i=-1; i<=1; i++) {
+							for (var j=-1; j<=1; j++) {
+								if (((i!==0) || (j!==0)) && (row+i>=0) && (row+i<numberOfRows) && (col+j<numberOfRows) && (col+j>=0)) {
+									let x = (col+0.5+0.5*j)*colSeparation;
+									let y = (row+0.5+0.5*i)*rowSeparation;
+									if (i===0) { y =ball.get("y");}
+									if (j===0) { x = ball.get("x");}
+									var pos = ball.getVectorPos();
+									if ( ball.get("radius") >= distanceTo(ball.getVectorPos(), [x,y]) ) {
+										grid[row+i][col+j][1].push(ball);
+									}
 								}
 							}
 						}
 					}
+					else { extras.push(ball); }
 				}
-				else { extras.push(ball); }
 			}
-		});
+		}
 		// Iterating over the primary grid, calculating collisions with all primary and secondary balls
 		// (In certain unlikley conditions, this may be calculating some bounces twice, but this doesn't introduce extra energy and is not physically incorrect so it doesn't matter physics-wise.)
 		for (var i=0; i<numberOfRows; i++) {
@@ -375,6 +415,10 @@ physicsEngine.CanvasView = Backbone.View.extend({
 						self.selectedBall.set("y", currentMousePos[1]);
 					});
 					self.$el.on("mouseup", function(evt) {
+						// Check if placed colliding with ramp, if so place on ramp
+						physicsEngine.ramps.forEach( function(ramp) {
+							if (self.selectedBall.touchingRamp(ramp)) { self.selectedBall.placeOnRamp(ramp); }
+						});
 						self.$el.off("mouseup");
 						self.$el.off("mousemove");
 					});
@@ -392,11 +436,25 @@ physicsEngine.CanvasView = Backbone.View.extend({
 	drawAll: function() {
 		let self = this;
 		physicsEngine.ctx.clearRect(0,0,physicsEngine.canvas.width, physicsEngine.canvas.height);
+		physicsEngine.ramps.forEach( 		function(ramp) { self.drawRamp(ramp);} );
 		physicsEngine.springs.forEach( 		function(spring) {self.drawSpring(spring);} );
 		physicsEngine.balls.forEach( 		function(ball) {self.drawBall(ball);} );
 		physicsEngine.containers.forEach( 	function(cont) {self.drawContainer(cont);} );
 		if (this.userSpring) { this.drawSpring(this.userSpring); }
 		if (this.selectedBall) { this.highlightBall(this.selectedBall);}
+	},
+	
+	// Draw a ramp
+	drawRamp: function(ramp) {
+		let positions = ramp.getVectorPositions();
+		let ctx = physicsEngine.ctx;
+		ctx.strokeStyle = "#000000";
+		ctx.beginPath();
+		ctx.lineWidth = 2;
+		ctx.moveTo( positions[0][0], positions[0][1])
+		ctx.lineTo( positions[1][0], positions[1][1])
+		ctx.stroke();
+		ctx.closePath();	
 	},
 	
 	// Draw a ball

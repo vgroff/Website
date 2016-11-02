@@ -1,0 +1,13 @@
+ssh vincent@139.59.183.144
+cd ./Website/myproject
+sudo git fetch origin
+sudo git reset --hard origin 
+source ./myprojectenv/bin/activate
+sudo rm -r ./static
+python manage.py collectstatic
+sudo chmod 664 ./db.sqlite3
+sudo chown :www-data ./db.sqlite3
+sudo service apache2 restart
+
+
+

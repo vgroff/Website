@@ -21,8 +21,10 @@ physicsEngine.AppView = Backbone.View.extend({
 		var collections = [
 			physicsEngine.balls,
 			physicsEngine.springs,
+			physicsEngine.ramps,
 			physicsEngine.containers,
 		];
+		this.collections = collections;
 		// Building the headings that link to the various routes
 		for (var i=0; i < collections.length; i++) {
  			var heading  = $(document.createElement('a'));
@@ -38,6 +40,16 @@ physicsEngine.AppView = Backbone.View.extend({
 			$("#physicsEngine").append(heading);
 			
 		}
+		// Fill up and add the headings
+		var heading  = $(document.createElement('a'));	
+		heading.attr("href", "#Special");
+		heading.addClass("physicsEditHeadings");
+		heading.html("Special");
+		if (physicsEngine.editFilter === "Special") {
+			this.currentHeading = heading;
+			heading.addClass("physicsEditHeadingSelected");
+		}
+		$("#physicsEngine").append(heading);
 		// Building the editViews for each route
 		var uiDiv = $(document.createElement('div'));
 		uiDiv.attr("id", "physicsEngineUI")
@@ -49,6 +61,9 @@ physicsEngine.AppView = Backbone.View.extend({
 				editView.$el.hide();
 			}
 		}
+		var specialView = new physicsEngine.SpecialView();
+		uiDiv.append(specialView.$el);
+		if ( (physicsEngine.editFilter) && ((physicsEngine.editFilter !== "Special")) ) {specialView.$el.hide();}
 		this.moveToTopButton  = $(document.createElement('button'));
 		this.moveToTopButton.attr("id", "moveToEngine");
 		this.moveToTopButton.html( "Return To Simulation" );
@@ -57,6 +72,8 @@ physicsEngine.AppView = Backbone.View.extend({
 		$("#physicsEngine").append(uiDiv);
 		
 		$(".physicsEditHeadings").css('cursor', 'pointer');
+		
+		this.listenTo(physicsEngine.graphs, "add", this.renderGraph);
 
 		this.render();
 	},
@@ -77,10 +94,14 @@ physicsEngine.AppView = Backbone.View.extend({
 		this.canvasView.$el.get(0).scrollIntoView();
 	},
 	
+	renderGraph: function(model) {
+		var graph = new physicsEngine.GraphView({model:model});
+		$("#physicsEngineGraphingArea").append(graph.$el);
+	},
+	
 	resetCollections: function() {
-		physicsEngine.balls.reset();
-		physicsEngine.springs.reset();
-		physicsEngine.containers.reset();
+		for (var i=0; i<this.collections.length; i++) {this.collections[i].reset();}
+		physicsEngine.graphs.reset();
 		physicsEngine.containers.add([new physicsEngine.Container({"id":physicsEngine.containers.nextId()})]);
 	},
 });
@@ -147,7 +168,65 @@ function Scenario2() {
 	physicsEngine.canvasView.fillRandomly(60, 450, 620, 495, 25, {speedY:-1.5});
 }
 
-Scenario2();
+function Scenario3() {
+	var pendulumX = 580;
+	var pendulumLength = 130;
+	var pendulumK = 0.0007;
+	physicsEngine.balls.add(new physicsEngine.Ball({x:pendulumX, y:40+pendulumLength, mass:1, speedX: 0, speedY:1, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.springs.add({point1:physicsEngine.balls.nextId()-1, point2:[pendulumX, 40], length:pendulumLength, dampening: 0, k:pendulumK, id:physicsEngine.springs.nextId(), });
+	physicsEngine.graphs.add( new physicsEngine.Graph({plottingBalls:[1], plottingDirection:[0,1], id: physicsEngine.graphs.nextId()}) );
+	console.log(physicsEngine.graphs);
+	physicsEngine.g = 0.045;
+	var doublePendulum = 395;
+	var doublePendulumL = 100;
+	physicsEngine.balls.add(new physicsEngine.Ball({x:doublePendulum, y:40+doublePendulumL, mass:1, speedX: 3 , speedY:0, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.balls.add(new physicsEngine.Ball({x:doublePendulum, y:40+doublePendulumL*2, mass:1, speedX: 1, speedY:0, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
+	physicsEngine.springs.add({point1:physicsEngine.balls.nextId()-2, point2:[doublePendulum, 40], length:doublePendulumL, dampening: 0.999, k:950, colour:"#000000",id:physicsEngine.springs.nextId(), });
+	physicsEngine.springs.add({point1:physicsEngine.balls.nextId()-2, point2:physicsEngine.balls.nextId()-1, length:doublePendulumL, dampening: 0.999, k:950, colour:"#000000", id:physicsEngine.springs.nextId(), });
+	var cradleX = 110;
+	var cradleLength = 150;
+	var cradleRadius = 10;
+	var cradleN = 5;
+	for (var i =0; i < cradleN; i++) {
+		var ballId = physicsEngine.balls.nextId();
+		let speed = 0;
+		if (i===0) {speed=-1;}
+		physicsEngine.balls.add(new physicsEngine.Ball({x:cradleX+i*2*cradleRadius, y:40+cradleLength, mass:1, radius: cradleRadius, speedX: speed, speedY:0, friction: 0, bounciness:1, id:ballId}));
+		physicsEngine.springs.add({point1:ballId, point2:[cradleX+i*2*cradleRadius, 40], length:cradleLength, dampening: 0.999, k:950, colour:"#000000", id:physicsEngine.springs.nextId(), });		
+	}
+	physicsEngine.canvasView.fillRandomly(60, 450, 620, 495, 25, {speedY:-1.5});
+	var ramp = new physicsEngine.Ramp({x1:95, y1:350, x2: 300, y2:420, id:physicsEngine.ramps.nextId()});
+	physicsEngine.ramps.add( ramp );
+	$("#content").get(0).scrollIntoView();
+}
+
+function ScenarioTest() {
+	var ball = new physicsEngine.Ball({x:300, y:40, mass:1, speedX: 0, speedY:1, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()});
+	physicsEngine.balls.add(ball);
+	var ball2 = new physicsEngine.Ball({x:300, y:40, mass:1, speedX: 0, speedY:1, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()});
+	physicsEngine.balls.add(ball2);
+	var ball3 = new physicsEngine.Ball({x:300, y:40, mass:1, speedX: 0, speedY:1, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()});
+	physicsEngine.balls.add(ball3);
+	var ball4 = new physicsEngine.Ball({x:300, y:40, mass:1, speedX: 0, speedY:1, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()});
+	physicsEngine.balls.add(ball4);
+	var ramp = new physicsEngine.Ramp({x1:350, y1:300, x2: 400, y2:400, id:physicsEngine.ramps.nextId()});
+	physicsEngine.ramps.add( ramp );
+	ball.placeOnRamp(ramp);
+	var ramp2 = new physicsEngine.Ramp({x1:250, y1:300, x2: 200, y2:200, id:physicsEngine.ramps.nextId()});
+	physicsEngine.ramps.add( ramp2 );
+	ball2.placeOnRamp(ramp2);
+	var ramp3 = new physicsEngine.Ramp({x1:70, y1:300, x2: 150, y2:200, id:physicsEngine.ramps.nextId()});
+	physicsEngine.ramps.add( ramp3 );
+	ball3.placeOnRamp(ramp3);
+	var ramp4 = new physicsEngine.Ramp({x1:500, y1:200, x2: 430, y2:300, id:physicsEngine.ramps.nextId()});
+	physicsEngine.ramps.add( ramp4 );
+	ball4.placeOnRamp(ramp4);
+}
+
+new physicsEngine.AppView();
+Scenario3();
+
+//Scenario3();
 
 //
 
@@ -167,7 +246,7 @@ Scenario2();
 	//~ }
 //~ }
 
-new physicsEngine.AppView(); // kick things off
+ // kick things off
 
 // TODO:
 
@@ -175,14 +254,14 @@ new physicsEngine.AppView(); // kick things off
 // Question would be how to allow only me to do this. Could just do it on local server and take it out of the final version?? Would presumably need to change allowed_methods or something on the Django side
 // Other option is to set up users?	
 
-// Just put it up!!
-// Make it colourful
+// Make it more colourful
 // Energy being lost over time?
 // Have "Special" tab with just the ability to load the example scenario for now?
-
-// Should action spring be just before move? 
-// Have links to move up and down the page, probably need to do this in javascript rather than via anchors. Could have router deal with whole
-// thing since it's quite simple.
+// give ramps friction - for learning but also helpful so that we can make balls stick to them to measure distances
+// should dampening also be mass dependent i.e. should you do it with momentum rather than speed? would make sense since F=ma?! basics arent we doing it from centre of mass frame rather than mid point!
+// Ability to have "invisible" balls that don't collide with other balls for teaching purpose?
+// Fix newtons cradle by switching the direction in which balls are iterated over every other time (i.e. every other time, go backwards over the original list!)
+// BUG: New ball doesn't edit properly!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // 
 // Move physicsEngine.g into physicsEngine.globalOptions so that it can be checked for change more easily
 // Have ability to collapse the stats on an editChildView, such that it runs faster
@@ -199,6 +278,7 @@ new physicsEngine.AppView(); // kick things off
 // Have ability to graph things, would be quite easy. Either an individual thing over time or many things binned (e.g. for M-B dist).
 // Can choose an update period for the graph, but could do a simple thing where individual lines are drawn in at each update, until
 // one of them goes over the 
+// Graphs are models+views+collections, and the render() function is called by the canvsView object at each "tick" that way, it is correct in time too.	
 
 // FUTURE:
 // - Special objects could include:
@@ -207,6 +287,7 @@ new physicsEngine.AppView(); // kick things off
 // Could simulate things like water tension on a cup, water going down a slope to fill a container, ect...
 
 // WEBSITE TODO:
-// Create users
+// Add physics project from last year to website in other projects, and add option of adding videos/images to other projects !!!!
+// Create users !!CANT DO THIS WHILE STUFF IS STILL ON PUBLIC GITHUB REPO
 // Posts/Comments page (+later ability to edit posts)
 // Then ability to save physics engine using tastypie
