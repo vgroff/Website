@@ -175,7 +175,6 @@ function Scenario3() {
 	physicsEngine.balls.add(new physicsEngine.Ball({x:pendulumX, y:40+pendulumLength, mass:1, speedX: 0, speedY:1, friction: 0, bounciness:1, id:physicsEngine.balls.nextId()}));
 	physicsEngine.springs.add({point1:physicsEngine.balls.nextId()-1, point2:[pendulumX, 40], length:pendulumLength, dampening: 0, k:pendulumK, id:physicsEngine.springs.nextId(), });
 	physicsEngine.graphs.add( new physicsEngine.Graph({plottingBalls:[1], plottingDirection:[0,1], id: physicsEngine.graphs.nextId()}) );
-	console.log(physicsEngine.graphs);
 	physicsEngine.g = 0.045;
 	var doublePendulum = 395;
 	var doublePendulumL = 100;

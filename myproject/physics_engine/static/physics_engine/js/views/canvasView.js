@@ -31,9 +31,12 @@ physicsEngine.CanvasView = Backbone.View.extend({
 		this.listenTo(physicsEngine.containers, 'change', this.render);
 		this.listenTo(physicsEngine.containers, 'add', this.render);
 		this.listenTo(physicsEngine.containers, 'remove', this.render);
-		this.listenTo(physicsEngine.graphs, 'change', this.render);
-		this.listenTo(physicsEngine.graphs, 'add', this.render);
-		this.listenTo(physicsEngine.graphs, 'remove', this.render);
+		this.listenTo(physicsEngine.ramps, 'change', this.render);
+		this.listenTo(physicsEngine.ramps, 'add', this.render);
+		this.listenTo(physicsEngine.ramps, 'remove', this.render);
+		//~ this.listenTo(physicsEngine.graphs, 'change', this.render);
+		//~ this.listenTo(physicsEngine.graphs, 'add', this.render);
+		//~ this.listenTo(physicsEngine.graphs, 'remove', this.render);
 		this.listenTo(this, "render", this.render);
 	},
 	
@@ -119,7 +122,7 @@ physicsEngine.CanvasView = Backbone.View.extend({
 			ball.applyFriction();
 			ball.move();
 		});	
-		this.applyCollisions();
+		if (physicsEngine.balls.length > 0) {this.applyCollisions();}
 		physicsEngine.balls.forEach( function(ball) {
 			//~ var ball = ball;
 			//~ var self = self;

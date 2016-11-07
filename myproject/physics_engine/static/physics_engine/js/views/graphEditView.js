@@ -103,7 +103,6 @@ physicsEngine.GraphEditView = Backbone.View.extend({
 	
 	// Renders a new child model when added to collection
 	renderOne: function(model) {
-		console.log("RENDER");
 		model.set("name", this.collection.nameModel);
 		let childView = new physicsEngine.GraphEditChildView({model:model});
 		this.$el.append(childView.$el);	

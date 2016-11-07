@@ -51,6 +51,7 @@ physicsEngine.EditView = Backbone.View.extend({
 	// Renders a new child model when added to collection
 	renderOne: function(model) {
 		this.addNewButtonBottom.remove();
+		model.set("name", this.collection.nameModel);
 		let childView = new physicsEngine.editChildView({model:model});
 		this.$el.append(childView.$el);	
 		childView.$el.get(0).scrollIntoView();
