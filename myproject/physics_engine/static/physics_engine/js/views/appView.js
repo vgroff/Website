@@ -63,7 +63,7 @@ physicsEngine.AppView = Backbone.View.extend({
 		}
 		var specialView = new physicsEngine.SpecialView();
 		uiDiv.append(specialView.$el);
-		if ( (physicsEngine.editFilter) && ((physicsEngine.editFilter !== "Special")) ) {specialView.$el.hide();}
+		if ( !(physicsEngine.editFilter) || ((physicsEngine.editFilter !== "Special")) ) {specialView.$el.hide();}
 		this.moveToTopButton  = $(document.createElement('button'));
 		this.moveToTopButton.attr("id", "moveToEngine");
 		this.moveToTopButton.html( "Return To Simulation" );
