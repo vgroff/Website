@@ -1,3 +1,5 @@
-li a {
-	color: black;
+#new_choice_textbox {
+	margin-left:10px;
+	max-width: 30%;
 }
+

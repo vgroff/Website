@@ -1,0 +1,51 @@
+#todoapp { 
+	border-radius : 30px;
+	background-color: #618685;
+	margin: 0 auto;
+	margin-top: 20px;
+	padding: 20px;
+	width: 60%;
+}
+
+#todoHeader { 
+	margin: 0 auto;
+	max-width: 100%;
+}
+
+#todoMain { 
+	margin: 0 auto;
+	max-width: 100%;
+	padding: 20px 50px 20px 50px ;
+}
+
+#todoFooter{
+	margin-top: 10px;
+}
+
+#todoFilters {
+	margin: 5px 0px 15px 0px;
+}
+
+#todoFilters li a {
+	color: black;
+}
+
+#todoapp .hidden {
+	display:none;
+}
+
+#todoapp .edit {
+	display:none;
+}
+
+#todoapp .editing .edit {
+	display:block;
+}
+
+#todoapp .destroyItem {
+	font-size:11pt;
+}
+
+#todoFilters .selected { 
+	font-weight:bold;
+}
