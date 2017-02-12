@@ -1,3 +1,51 @@
+
+
+
+
+
+
+
+//
+//
+
+//
+//
+//
+//
+// THIS HAS BEEN SUPERSEEDED BY GAMECLASSES AND GAMELOGIC AND ISNT USED ANYMORE!!!
+//
+//
+//
+
+//
+//
+//
+//
+//
+//
+//
+//THIS HAS BEEN SUPERSEEDED BY GAMECLASSES AND GAMELOGIC AND ISNT USED ANYMORE!!!
+//
+//
+//
+//
+//
+//
+//
+//
+//
+//
+
+
+
+
+
+
+
+
+
+
+
 var policeGame = {};
 
 function PoliceGame() {
@@ -79,57 +127,57 @@ PoliceGame.prototype.handleKeyUp = function(evt) {
 	}
 };
 
-function Area(xSize, ySize, tileSize) {
-	this.xSize = xSize;
-	this.ySize = ySize;
-	this.tileSize = tileSize;
-	this.grid = [];
-	for (var i = 0; i < xSize; i++) {
-		for (var j = 0; j < ySize; j++) {
-			this.grid.push( new Tile(true) );
-		}	
-	}
-}
+//~ function Area(xSize, ySize, tileSize) {
+	//~ this.xSize = xSize;
+	//~ this.ySize = ySize;
+	//~ this.tileSize = tileSize;
+	//~ this.grid = [];
+	//~ for (var i = 0; i < xSize; i++) {
+		//~ for (var j = 0; j < ySize; j++) {
+			//~ this.grid.push( new Tile(true) );
+		//~ }	
+	//~ }
+//~ }
 
 //~ Area.prototype. = function() {
 //~ };
 
-function Tile(walkable) {
-	this.walkable = walkable;
-	this.contains = [];
-}
+//~ function Tile(walkable) {
+	//~ this.walkable = walkable;
+	//~ this.contains = [];
+//~ }
 
-function Character() {
-	this.health = 100;
-	this.x = 0;
-	this.y = 0;
-	this.speedx = 0;
-	this.speedy = 0;
-	this.maxSpeed = 4;
-	this.image = new createjs.Shape();
-	this.size = 32;
-	this.image.graphics.beginFill("DeepSkyBlue").drawRect(0, 0, this.size, this.size);
-	this.image.regX = this.size/2;
-	this.image.regY = this.size/2;
-}
+//~ function Character() {
+	//~ this.health = 100;
+	//~ this.x = 0;
+	//~ this.y = 0;
+	//~ this.speedx = 0;
+	//~ this.speedy = 0;
+	//~ this.maxSpeed = 4;
+	//~ this.image = new createjs.Shape();
+	//~ this.size = 32;
+	//~ this.image.graphics.beginFill("DeepSkyBlue").drawRect(0, 0, this.size, this.size);
+	//~ this.image.regX = this.size/2;
+	//~ this.image.regY = this.size/2;
+//~ }
 
-Character.prototype.setPos = function(x,y) {
-	this.x = x;
-	this.y = y;
-	this.image.x = x;
-	this.image.y = y;
-};
+//~ Character.prototype.setPos = function(x,y) {
+	//~ this.x = x;
+	//~ this.y = y;
+	//~ this.image.x = x;
+	//~ this.image.y = y;
+//~ };
 
-Character.prototype.turnTo = function(x,y) {
-	angle = Math.atan2( y - this.y, x - this.x);
-	angle = angle * (180/Math.PI);
-	if(angle < 0)
-	{
-		angle = 360 - (-angle);
-	}
-	this.image.rotation = angle;	
+//~ Character.prototype.turnTo = function(x,y) {
+	//~ angle = Math.atan2( y - this.y, x - this.x);
+	//~ angle = angle * (180/Math.PI);
+	//~ if(angle < 0)
+	//~ {
+		//~ angle = 360 - (-angle);
+	//~ }
+	//~ this.image.rotation = angle;	
 	
-};
+//~ };
 
 game = new PoliceGame();
 

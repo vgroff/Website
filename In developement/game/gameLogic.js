@@ -1,6 +1,6 @@
 function PoliceGame() {
  
-	this.currentArea = new Area(50,50,32);
+	this.currentArea = new Area(25,25,32);
 	this.currentArea.play();
 
 }
@@ -11,10 +11,8 @@ game = new PoliceGame();
 
 
 // MINIMU REQUIREMENT:
-// 1. Moving square
-// 2. Rotating square with mouse
-// 3. Areas with no-go zones
-// 4. Change to WASD keys
+// 1. Areas with no-go zones
+// 2. Move screen
 
 // Going to need to decide how to split this up.
 // UI should clearly be listened for and then queued into updateStage
