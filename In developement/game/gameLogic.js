@@ -1,21 +1,59 @@
-function PoliceGame() {
- 
-	this.currentArea = new Area(25,25,32);
-	this.currentArea.play();
+policeGame.player = new policeGame.MainCharacter();
 
+
+
+policeGame.PoliceGame = function() {
+	this.stage = policeGame.stage;
+	this.currentArea = null;
+	this.gameTime = 0;
+	this.resetGame();	
+	window.addEventListener("keyup", this.handleKeyUp.bind(this));
+	
+	policeGame.player.deathCallback = this.deathScreen.bind(this);
 }
 
+policeGame.PoliceGame.prototype.resetGame = function() {
+	if (this.currentArea !== null) {
+		this.gameTime = this.currentArea.gameTime
+		this.currentArea.close();
+	}
+	this.currentArea = new policeGame.Area(18,18,32, this.gameTime);
+	this.currentArea.play();
+	policeGame.player.resurect();
+}
+
+policeGame.PoliceGame.prototype.deathScreen = function() {
+	new policeGame.DeathMenu(this.stage, this.resetGame.bind(this));
+}
+
+policeGame.PoliceGame.prototype.handleKeyUp = function(evt) {
+	evt.preventDefault();
+	var code = evt.keyCode;
+	if (code === 27) {
+		this.togglePauseGame();
+	}
+};
+
+policeGame.PoliceGame.prototype.togglePauseGame = function(evt) {
+	this.currentArea.paused = !this.currentArea.paused;
+	if (this.currentArea.paused === true) {
+		this.currentArea.pause();	
+		new policeGame.PauseMenu(this.stage, this.unpauseGame.bind(this));
+	}
+	else {
+		this.currentArea.play();
+	}	
+};
+
+policeGame.PoliceGame.prototype.unpauseGame = function() {
+	console.log("unpause");
+	this.currentArea.paused = false;
+	this.currentArea.play();
+};
 
 
-game = new PoliceGame();
 
 
-// MINIMU REQUIREMENT:
-// 1. Areas with no-go zones
-// 2. Move screen
 
-// Going to need to decide how to split this up.
-// UI should clearly be listened for and then queued into updateStage
-// Going to need classes for player and for NPCs
-// Going to need classes for stages (here neighbourhood)
-// Going to need classes for weapons
+game = new policeGame.PoliceGame();
+
