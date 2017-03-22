@@ -53,7 +53,6 @@ policeGame.PauseMenu.prototype.returnToGameESC = function(evt) {
 	this.stage.removeChild(this.container);
 	window.removeEventListener("keyup", this.handleKeyUpFunc);
 	window.removeEventListener("mouseup", this.handleMouseUpFunc);
-	//this.callback();
 };
 
 policeGame.PauseMenu.prototype.returnToGameButton = function(evt) {
@@ -67,7 +66,7 @@ policeGame.PauseMenu.prototype.returnToGameButton = function(evt) {
 
 
 
-policeGame.DeathMenu = function(stage, callback) {
+policeGame.DeathMenu = function(score, stage, callback) {
 	this.container = new createjs.Container();
 	this.container.x = 0;
 	this.container.y = 0;
@@ -83,11 +82,16 @@ policeGame.DeathMenu = function(stage, callback) {
 	text.x = policeGame.canvas.width/2 - bounds.width/2;
 	text.y = 200;
 	this.container.addChild(text);
+	var scoreText = new createjs.Text("Score: "+score, "30px Arial", "#000000");
+	var bounds = scoreText.getBounds();
+	scoreText.x = policeGame.canvas.width/2 - bounds.width/2;
+	scoreText.y = 275;
+	this.container.addChild(scoreText);
 	this.handleMouseUpFunc =  this.handleMouseUp.bind(this);
 	window.addEventListener("mouseup",this.handleMouseUpFunc);
 	buttons = [];
 	var buttonSizeX = 250
-	buttons.push( new policeGame.Button(policeGame.canvas.width/2 - buttonSizeX/2, 300, buttonSizeX, 40, "Purple", {"text": "Restart Game", "font": "20px Arial"}) );
+	buttons.push( new policeGame.Button(policeGame.canvas.width/2 - buttonSizeX/2, 350, buttonSizeX, 40, "Purple", {"text": "Restart Game", "font": "20px Arial"}) );
 	buttons[0].callback = this.restartGame.bind(this);
 	for (var i = 0; i < buttons.length; i++) {
 		this.container.addChild(buttons[i].container);

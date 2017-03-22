@@ -1,31 +1,36 @@
 
-
+// Base gun class
 policeGame.Gun = function(automatic, baseFireRate, baseDamage, baseRange, baseClipSize, ammunitionType) {
 	this.fireRate = baseFireRate;
 	this.damage = baseDamage;
 	this.lastShot = -this.fireRate;
 	this.automatic = automatic;
-	this.shot = false;
+	this.triggerReleased = true;
 	this.clipSize = baseClipSize;
 	this.currentClip = this.clipSize;
 	this.ammunitionType = ammunitionType;
 }
 
 policeGame.Gun.prototype.pullTrigger = function(gameTime) {
-	if ((this.automatic === true || this.shot === false) && (gameTime - this.lastShot >= this.fireRate) && this.currentClip > 0) {
-		this.shot = true;
+	// Only release bullet if automatic or if trigger is released before being pulled and the fireRate is correct and enough ammo is left
+	if ((this.automatic === true || this.triggerReleased === true) && (gameTime - this.lastShot >= this.fireRate) && this.currentClip > 0) {
+		// Trigger now pulled
+		this.triggerReleased = false;
+		// Time of last shot (needed for fire rate)
 		this.lastShot = gameTime;
-		var bullet = new policeGame.Bullet(this.damage, this.range);
+		// Create and return bullet, decremenet clip
 		this.currentClip -= 1;
+		var bullet = new policeGame.Bullet(this.damage, this.range);
 		return bullet
 	}
 	return null;
 }
 
 policeGame.Gun.prototype.releaseTrigger = function() {
-	this.shot = false;
+	this.triggerReleased = true;
 }
 
+// Takes ammo, reloads clip, returns excess ammo
 policeGame.Gun.prototype.reload = function(ammo) {
 	var missingBullets = this.clipSize - this.currentClip;
 	if ( missingBullets >= ammo) {
@@ -54,12 +59,14 @@ policeGame.Bullet.prototype.update = function() {
 	if (this.distance > this.range) {return false}
 }
 
+// Check for collisions with walls or players
 policeGame.Bullet.prototype.checkCollision = function(grid) {
 	var currentTile = grid.pointToTile(this.image.x, this.image.y);
 	var tile = grid.getTile(currentTile[0], currentTile[1]);
 	if (tile === null || tile.walkable === false) {
 		return true;
 	}
+	// Check in the 8 tiles surrounding (defo enough with small object)
 	for (var i = -1; i<=1; i++) {
 		var xTile = currentTile[0]+i;
 		for (var j = -1; j<=1; j++) {
@@ -76,6 +83,7 @@ policeGame.Bullet.prototype.checkCollision = function(grid) {
 			}
 		}		
 	}
+	return false;
 }
 
 
@@ -95,3 +103,36 @@ policeGame.NineMM.prototype = Object.create(policeGame.Gun.prototype);
 
 // correct the constructor pointer because it points to Character
 policeGame.NineMM.prototype.constructor = policeGame.NineMM;
+
+
+policeGame.AssaultRifle = function() {
+	this.baseFireRate = 7;
+	this.baseDamage = 15;
+	this.automatic = true;
+	this.baseClipSize = 30;
+	this.baseRange = 300;
+	this.ammunitionType = "machineGun";
+	policeGame.Gun.apply(this, [this.automatic, this.baseFireRate, this.baseDamage, this.baseRange, this.baseClipSize, this.ammunitionType]);
+};
+
+// inherit Character
+policeGame.AssaultRifle.prototype = Object.create(policeGame.Gun.prototype);
+
+// correct the constructor pointer because it points to Character
+policeGame.AssaultRifle.prototype.constructor = policeGame.AssaultRifle;
+
+policeGame.Minigun = function() {
+	this.baseFireRate = 3;
+	this.baseDamage = 100;
+	this.automatic = true;
+	this.baseClipSize = 1000;
+	this.baseRange = 400;
+	this.ammunitionType = "minigun";
+	policeGame.Gun.apply(this, [this.automatic, this.baseFireRate, this.baseDamage, this.baseRange, this.baseClipSize, this.ammunitionType]);
+};
+
+// inherit Character
+policeGame.Minigun.prototype = Object.create(policeGame.Gun.prototype);
+
+// correct the constructor pointer because it points to Character
+policeGame.Minigun.prototype.constructor = policeGame.Minigun;
