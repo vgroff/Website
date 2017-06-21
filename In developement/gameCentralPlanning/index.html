@@ -1,0 +1,125 @@
+<!--
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<title>EaselJS Example: DOMElement Example</title>
+	<script type="text/javascript" src="https://code.createjs.com/createjs-2015.11.26.min.js"></script>
+	<script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
+	<script src="/home/vincent/git/Website/In developement/gameCentralPlanning/EaselJS-0.8.2/lib/easeljs-0.8.2.min.js"></script> 
+	
+
+<script id="editable">
+	var stage, container;
+	function init() {
+		// create a new stage and point it at our canvas:
+		canvas = document.getElementById("testCanvas");
+		stage = new createjs.Stage(canvas);
+		container = new createjs.Container();
+		stage.addChild(container);
+		var frame = new createjs.Shape();
+		frame.graphics.beginFill("#F00").drawRect(0, 0, 300, 300);
+		frame.regX = 150;
+		frame.regY = 150;
+		var content = new createjs.DOMElement("foo");
+		content.regX = 140;
+		content.regY = 140;
+		//content.visible = false;
+		container.addChild(frame, content);
+		container.x = 480;
+		container.y = 150;
+		container.alpha = 0.8;
+		container.rotation = -45;
+		//container.visible = false;
+		createjs.Ticker.timingMode = createjs.Ticker.RAF;
+		createjs.Ticker.addEventListener("tick", tick);
+	}
+	function tick(event) {
+		container.rotation += event.delta * 0.01;
+		container.alpha = 0.5 * (1 + Math.cos(container.rotation * 0.01));
+		stage.update(event);
+	}
+</script>
+
+</head>
+
+<body onload="init();">
+
+<header class="EaselJS">
+	<h1>DOMElement</h1>
+
+	<p>Simple example of using <code>DOMElement</code> to position HTML content
+		within the EaselJS display list. Note how the black
+		<code>DOMElement</code> can display outside the canvas boundaries,
+		whereas the red <code>Shape</code> cannot.</p>
+</header>
+
+<div>
+	<div id="foo"
+		 style="z-index: 10; position: absolute; background-color: #111; color:#FFF; width:260px; height:260px; padding: 10px; visibility: hidden;">
+		<b>Hello! I'm an HTML div.</b><br/><br/>
+		I am not rendered to the canvas, but I can be included in the display
+		list for positioning and transformations.<br/><br/>
+		This means I can contain any HTML content (rich text, forms, video,
+		etc), but I'm not a full part of the EaselJS display list.<br/><br/>
+		<button id="btn" width="100" onclick="alert('hello')">This is a
+			button!
+		</button>
+		<a href="http://easeljs.com/">This is a link</a>
+	</div>
+	<canvas id="testCanvas" width="960" height="300" style="z-index:0"></canvas>
+</div>
+
+
+</body>
+</html>
+-->
+
+
+
+<!DOCTYPE html>
+<html>
+<head>
+	
+    <meta charset="utf-8" />
+    <title>Central Planning</title>
+    <style>
+    	* { padding: 0; margin: 0; }
+    	canvas { background: #eee; display: block; margin: 0 auto; }
+    	#gameCanvas { margin-top: 5px;}
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="1000" height="750" style="background-color:#888888; z-Idex:1"></canvas>
+
+	
+
+<!--
+<script src="https://code.createjs.com/easeljs-0.8.2.min.js"></script>
+-->
+
+
+<!--
+<script type="text/javascript" src="https://code.createjs.com/createjs-2015.11.26.min.js"></script>
+-->
+<script type="text/javascript" src="jquery-1.12.0.min.js"></script>
+<script src="/home/vincent/git/Website/In developement/gameCentralPlanning/EaselJS-0.8.2/lib/easeljs-0.8.2.min.js"></script> 
+
+<script type="text/javascript" src="mathHelpers.js"></script> 
+<script type='text/javascript' src='Cobyla.js' ></script>
+<script type="text/javascript" src="centralPlanningGameInit.js"></script> 
+<script type="text/javascript" src="centralPlanningGameSettingsData.js"></script>
+<script type="text/javascript" src="centralPlanningGameGUILogic.js"></script>
+<script type="text/javascript" src="centralPlanningGameHappiness.js"></script>
+<script type="text/javascript" src="centralPlanningGameSettlementLogic.js"></script>
+<script type="text/javascript" src="centralPlanningGameProduction.js"></script>
+<script type="text/javascript" src="centralPlanningGameEvents.js"></script>
+<script type="text/javascript" src="centralPlanningGameGUIClasses.js"></script>
+<script type="text/javascript" src="centralPlanningGameMainLogic.js"></script>
+<script type="text/javascript" src="centralPlanningGameTopLogic.js"></script> 
+	
+</body>
+</html>
+
+
