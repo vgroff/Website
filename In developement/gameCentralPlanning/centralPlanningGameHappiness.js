@@ -156,7 +156,7 @@ centralPlanningGame.OverallHappiness.prototype.getSpending = function(wage, roug
 			var moneySpent = j*stepSize;
 			if (happinessName === "Savings") { 
 				if ( Math.abs(wage) > 0.0001 ) {
-					var maxima = {"value": this.settlement.happinessFactors["Savings"].calcHappiness(moneySpent, wage)[0]};
+					var maxima = this.settlement.happinessFactors["Savings"].calcHappiness(moneySpent, wage);
 				}
 				else {
 					var maxima = {"value": 0};
@@ -421,8 +421,13 @@ centralPlanningGame.SavingsHappiness.prototype = Object.create(centralPlanningGa
 centralPlanningGame.SavingsHappiness.prototype.constructor = centralPlanningGame.SavingsHappiness;
 
 centralPlanningGame.SavingsHappiness.prototype.calcHappiness = function(moneySpent, wage) {
-	var happiness = (moneySpent/wage)**0.6;
-	return [happiness];
+	if (wage > 0) {
+		var happiness = (moneySpent/wage)**0.6;
+		return {"value":happiness};
+	}
+	else {
+		return {"value":0};
+	}
 }
 
 

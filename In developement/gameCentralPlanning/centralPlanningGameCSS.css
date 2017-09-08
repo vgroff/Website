@@ -1,0 +1,85 @@
+
+div.centralGui.subMenu {
+	margin: 15px 0px 20px 0px;
+}
+
+.centralGui h5 {
+	font-size:11.5pt;
+}
+
+
+h3.centralGui.subMenu {
+	display: inline;
+	padding: 4px 5px 4px 5px;
+	border-radius: 10px;
+	border: 3px solid black;
+	cursor: pointer;
+}
+
+.centralGui.subMenu.clicked {
+	color: #FFFF22;
+	border-color: #FFFF22;
+}
+
+.centralGui.wageLevelDiv{
+	margin: 8px 0px 8px 0px;
+}
+
+.centralGui.wageLevelDiv > h5{
+	display:inline-block;
+	margin: 0px 15px 5px 0px;
+	font-size:11.5pt;
+}
+
+.centralGui.wageLevelDiv > div{
+	display:block;
+}
+
+.centralGui.happinessLevelDiv {
+	margin: 12px 0px 17px 10px;
+}
+
+.centralGui.happinessLevelDiv > p {
+	display: inline-block;
+}
+
+.centralGui.productLevelDiv {
+	margin: 9px 0px 14px 15px;
+}
+
+.centralGui.productLevelDiv > p {
+	display: inline-block;
+}
+
+.centralGui.buildingLevelDiv {
+	margin: 12px 0px 17px 0px;
+}
+
+/*
+.centralGui.column {
+	display: inline-block;
+	padding: 5px 13px 5px 13px;
+	vertical-align:top;
+}
+*/
+
+/*
+.centralGui.column > *{
+	min-height: 35px;
+	max-height: 35px;
+}
+
+.centralGui.column > button{
+	display: block;
+}
+
+.centralGui.column > p{
+	vertical-align: middle;
+	line-height: 35px; Must be the same as .column height
+}
+*/
+
+
+.hidden {
+	display: none !important;
+}

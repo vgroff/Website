@@ -44,6 +44,19 @@ centralPlanningGame.buildAndAddContainer = function(container) {
 	return area
 };
 
+// Callback for show/hide buttons
+centralPlanningGame.buttonUnhide = function(div, button) { 
+	if (div.hasClass("hidden")) {
+		div.removeClass("hidden");
+		button.html("Less Detail");
+	}
+	else {
+		div.addClass("hidden");
+		button.html("More Detail");
+	}
+}
+
+// OBSELETE
 centralPlanningGame.defaultProp = function(prop, props) {
 	if (props[prop] === null) {
 		return;
@@ -87,24 +100,29 @@ centralPlanningGame.Gui = function(container, coord, size, draggable, props) {
 	this.parentContainer.addChild(this.div);
 	//this.background.graphics.beginFill(p["color"]).drawRect(0,  0, size[0], size[1]);
 	//this.container.addChild(this.background)
+	//console.log(this);
 	if (draggable) { this.divH.addEventListener("mousedown", this.startGuiDrag.bind(this, this.divH, this.div)); }
-	console.log(coord);
 }
 
 centralPlanningGame.Gui.prototype.startGuiDrag = function(el, domEl, e) {
-	var guiDrag = function (e) {
-		var offset = $(centralPlanningGame.canvas).offset();
-		var mousePos = [e.clientX, e.clientY];
-		domEl.y = mousePos[1] - offset.top;
-		domEl.x = mousePos[0] - offset.left;
+	var offset = $(centralPlanningGame.canvas).offset();
+	var mousePos = [e.clientX, e.clientY];
+	var mouseOffset = [(mousePos[0] - offset.left) - domEl.x, (mousePos[1] - offset.top) - domEl.y];
+	if (mouseOffset[0] < this.size[0]) { // -5 so that scrollbar can still be used if needed
+		var guiDrag = function (e) {
+			var mousePos = [e.clientX, e.clientY];
+			domEl.y = (mousePos[1] - offset.top) - mouseOffset[1];
+			domEl.x = (mousePos[0] - offset.left)  - mouseOffset[0];
+		}
+		window.addEventListener("mousemove", guiDrag);
+		var endDrag = function(e) {
+			window.removeEventListener("mousemove", guiDrag)
+			window.removeEventListener("mouseup", endDrag);		
+		}
+		window.addEventListener("mouseup", endDrag);
 	}
-	window.addEventListener("mousemove", guiDrag);
-	var endDrag = function(e) {
-		window.removeEventListener("mousemove", guiDrag)
-		window.removeEventListener("mouseup", this);		
-	}
-	window.addEventListener("mouseup", endDrag);
 }
+
 
 centralPlanningGame.ButtonGui = function(container, coord, size, callback, draggable, props) {
 	centralPlanningGame.Gui.call(this, container, coord, size, draggable, props);

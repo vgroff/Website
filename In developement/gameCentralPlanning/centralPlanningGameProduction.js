@@ -24,7 +24,6 @@ centralPlanningGame.Production = function(title, dateBuilt, size, inputs, produc
 	this.optimumNumberWorkers = optimumNumberWorkers;
 	this.maxAvailableJobs = optimumNumberWorkers; // For now at least.
 	this.availableJobs = optimumNumberWorkers;
-	this.employees = 0;
 	this.baseJobQuality = baseJobQuality;
 	this.jobQuality = baseJobQuality;
 	this.numberWorkers = 0;
@@ -128,17 +127,23 @@ centralPlanningGame.Production.prototype.buyInputs = function(settlement, really
 	var totalProduced = productionPerWorker*this.numberWorkers;
 	var inputs = [];
 	var prod = new this.product();
-	var outputPrice = settlement.reserves[prod.type][prod.title].privatePrice;
+	if (this.ownedBy === "state"){
+		var outputPrice = settlement.reserves[prod.type][prod.title].statePrice;
+	}
+	else {
+		var outputPrice = settlement.reserves[prod.type][prod.title].privatePrice;
+	}
 	for (var inputIndex in this.inputs) {
 		var inputArr = this.inputs[inputIndex];
 		var input = new inputArr[0]();
 		var multiplier = inputArr[1];
 		var bought = settlement.buyCheapestAmountIndustry(input, totalProduced, 1e99);
-		var ratio = multiplier - bought[2]/outputPrice;
+		if (outputPrice === 0) { var ratio = multiplier/bought[2];}
+		else { var ratio = multiplier - bought[2]/outputPrice; }
 		inputs.push({"input": input, "inputIndex": inputIndex, "ratio":ratio, "multiplier":multiplier, "bought":bought, "excessDemand":0});
 	}
 	inputs.sort( function(a,b) {
-		a["ratio"] - b["ratio"]; // A low ratio is better
+		b["ratio"] - a["ratio"]; // A higher ratio is better
 	});
 	var produced = 0; 
 	var cost = 0;
@@ -226,7 +231,7 @@ centralPlanningGame.Production.prototype.setJobsGetTheoreticalWage = function(pr
 	if (this.ownedBy === "workers") {
 		var theoreticalIncome = 0;
 		var bestCase = [0,0];
-		for (var i=this.availableJobs; i >0 ; i--) {
+		for (var i=this.availableJobs; i > 0 ; i--) {
 			this.numberWorkers = i;
 			theoreticalIncome = this.theoreticalProduce()*productPrice;
 			if (theoreticalIncome/this.numberWorkers > bestCase[0]) {
@@ -239,7 +244,7 @@ centralPlanningGame.Production.prototype.setJobsGetTheoreticalWage = function(pr
 		}
 		this.numberWorkers = 0;
 		this.availableJobs = bestCase[1];
-		return (this.totalIncome-this.totalExpenses)/this.numberWorkers + bestCase;
+		return (this.totalIncome-this.totalExpenses)/this.numberWorkers + bestCase; // WTH IS THIS?!?!??!?! DIVISION BY 0?!?!!?!?!??!?!?!
 	}
 	else {
 		return this.wage;
@@ -248,9 +253,10 @@ centralPlanningGame.Production.prototype.setJobsGetTheoreticalWage = function(pr
 
 centralPlanningGame.StripFarms = function(dateBuilt) 
 {
-	centralPlanningGame.Production.call(this, "Strip Farms", dateBuilt, 10, null, centralPlanningGame.FarmProduce, null, 1.05, 0, 0.15, 
+	centralPlanningGame.Production.call(this, "Strip Farms", dateBuilt, 10, null, centralPlanningGame.FarmProduce, null, 0.95, 0, 0.15, 
 										null, "workers", 0);
 	this.availableJobs = 20;
+	this.maxAvailableJobs = 20;
 }
 
 // inherit 
@@ -276,15 +282,27 @@ centralPlanningGame.SmallBakery = function(dateBuilt)
 	centralPlanningGame.Production.call(this, "Small Bakery", dateBuilt, 10, [ [centralPlanningGame.FarmProduce, 1.1] ], centralPlanningGame.Bread, null, 2, 0, 0.15, 
 										10, "workers", 0);
 	this.availableJobs = 10;
+	this.maxAvailableJobs = 10;
 }
 
 // inherit 
 centralPlanningGame.SmallBakery.prototype = Object.create(centralPlanningGame.Production.prototype);
 // correct the constructor pointer
-centralPlanningGame.SmallBakery.prototype.constructor = centralPlanningGame.Bakery;
+centralPlanningGame.SmallBakery.prototype.constructor = centralPlanningGame.SmallBakery;
 
 
-
+// need x farm products per production, so prod per worker*numworkers gives total prod, so would need 
+centralPlanningGame.SmallCoop = function(dateBuilt) 
+{																			
+	centralPlanningGame.Production.call(this, "Small Coop", dateBuilt, 10, null, centralPlanningGame.AnimalProduce, null, 0.85, 0, 0.15, 
+										10, "workers", 0);
+	this.availableJobs = 10;
+	this.maxAvailableJobs = 10;
+}
+// inherit 
+centralPlanningGame.SmallCoop.prototype = Object.create(centralPlanningGame.Production.prototype);
+// correct the constructor pointer
+centralPlanningGame.SmallCoop.prototype.constructor = centralPlanningGame.SmallCoop;
 
 
 
@@ -305,6 +323,10 @@ centralPlanningGame.Product = function(title, type) {
 	this.productionBuildings = [];
 	this.totalProduced = 0;
 	this.totalSold = 0;
+	this.previousReserve = null;
+	this.previousPrice = null;
+	this.previousGrowth = null;
+	this.priceElasticity = -0.1;
 };
 
 centralPlanningGame.Wood = function() {

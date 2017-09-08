@@ -71,6 +71,8 @@ centralPlanningGame.Settlement = function(name, coordinates) {
 	this.secondaryEducation = 0.0;
 	this.districts = [];
 	this.wageLevels = [{"0":0}];
+	this.averageWageDaily = 0;
+	this.availableJobs = 0;
 	this.citizenWealth = 0;
 	this.entrepreneurWealth = 0;
 	this.averageWage = 0;
@@ -78,6 +80,8 @@ centralPlanningGame.Settlement = function(name, coordinates) {
 	this.overallHappiness = new centralPlanningGame.OverallHappiness(this);
 	this.happinessFactors = { "Food": new centralPlanningGame.FoodHappiness(this),
 							"Savings": new centralPlanningGame.SavingsHappiness(this)};
+	this.wageHappiness = [];
+	this.averageHappinessDaily = 0;
 	var bread = new centralPlanningGame.Bread();
 	var farmProduce = new centralPlanningGame.FarmProduce();
 	var animalProduce = new centralPlanningGame.AnimalProduce();
@@ -85,7 +89,106 @@ centralPlanningGame.Settlement = function(name, coordinates) {
 	this.addToReserves( bread );
 	this.addToReserves( farmProduce );
 	this.addToReserves( animalProduce );
-	this.addToReserves( processedFoods );
+	//this.addToReserves( processedFoods );
+};
+
+centralPlanningGame.Settlement.prototype.updatePrices = function() {
+	var optVal = this.population;
+	console.log("\nNewDay");
+	for (var productType in this.reserves) {
+		for (var productName in this.reserves[productType]) {
+			// If product is increasing by at least 10% of current value or 10% of population value but under 95% of population, keep price
+			// If product is increasing at all and over 100% population, lower price
+			// If product is decreasing, change.
+			var product = this.reserves[productType][productName];
+			var reserveGrowth = null;
+			var elasticityHalfLife = 0.4;
+			var maxPriceGrowth = 0.08;
+			var newReserve = product.privateOwned + product.stateOwned;
+			var minElasticity = 0.01;
+			if (product.previousReserve !== null && product.previousReserve !== 0) {
+				reserveChange = newReserve/product.previousReserve - 1;
+				var maxChange = 1;
+				if (reserveChange > maxChange) {
+					reserveChange = maxChange;
+				}
+				else if (reserveChange < -1 * maxChange) {
+					reserveChange = -maxChange;
+				}
+				if (product.previousGrowth !== null && product.previousPrice !== 0) {
+					priceChange = product.privatePrice/product.previousPrice - 1;
+					if (Math.abs(priceChange) > 0.000001) {
+						growthChange = reserveChange - product.previousGrowth;
+						// Want a link between how much consumption changes with price changes
+						// When price increases, growthChange should be negative and vice-versa
+						// Problem now is that a positive change in price can have a positive change in growth change (-11 - (-13) = 2) so both positive
+						// I.e. an increase in price slows negative growth rate and increases positive growth rate
+						// a decrease in price increases negative growth rate and decreases positive growth rate
+						// We want increase with decrease, i.e. we want the negative growth rate slowing to be negative, and an decrease in positive growth rate to be positive
+						// Here's what we also want: When price goes up but demand also goes up, elasticity should increase!
+						elasticity = (-1) * priceChange / growthChange;
+						if (elasticity > 0) {
+							elasticity = -0.1;
+						}
+						product.priceElasticity = product.priceElasticity * elasticityHalfLife + elasticity * (1 - elasticityHalfLife);
+						if (product.priceElasticity > -1 * minElasticity) {
+							product.priceElasticity = -1 * minElasticity;
+						}
+						console.log("Growth change: " + growthChange.toFixed(2) + "(" + reserveChange +", "+ product.previousGrowth +")" + ", Price change: " + (100*priceChange).toFixed(2) + "%, Elasticity: " + elasticity);
+					}
+				}
+				product.previousGrowth = reserveChange;
+				console.log(product.title + " reserves are growing at " + (reserveChange*100).toFixed(2) + "%" + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")");
+				//console.log(product.previousReserve, newReserve, reserveChange);
+			}
+			product.previousPrice = product.privatePrice;
+			//console.log(product, newReserve, reserveChange, product.privateOwned, product.stateOwned);
+			if (product.previousReserve !== null && product.previousReserve !== 0) {
+				if (newReserve >= optVal) {
+					var increase = product.priceElasticity * (newReserve - optVal)/(newReserve);//reserveChange;
+					var increase2 = product.priceElasticity * reserveChange;
+					if (Math.abs(increase2) > Math.abs(increase) ) {
+						increase2 = increase;
+					}
+					console.log(increase, increase2, (newReserve - optVal)/(newReserve));
+					if (Math.abs(increase) > maxPriceGrowth) {
+						if (increase > 0) {
+							increase = maxPriceGrowth;
+						}
+						else {
+							increase = -maxPriceGrowth;
+						}
+					}
+					product.privatePrice = product.privatePrice*(1 + increase); 
+					console.log("Price for " + product.title + " changed by " + (increase*100).toFixed(2) + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")");
+				}
+				else {
+					if (reserveChange < 0) {
+						// If reserves are decreasing and el > 0, the price change will be a decrease when it should be an increase!
+						var increase = product.priceElasticity * reserveChange;
+						if (Math.abs(increase) > maxPriceGrowth) {
+							if (increase > 0) {
+								increase = maxPriceGrowth;
+							}
+							else {
+								increase = -maxPriceGrowth;
+							}
+						}
+						product.privatePrice = product.privatePrice*(1 + increase);	
+						console.log("Price for " + product.title + " changed by " + (increase*100).toFixed(2) + "%" + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")");				
+					}
+					else { 
+						let b=1;	
+					}
+				}
+			}
+			else if (newReserve === 0) {
+				product.privatePrice = product.privatePrice * (1 + (maxPriceGrowth * 2) );
+				console.log("Price for " + product.title + " changed by " + (maxPriceGrowth*2*100).toFixed(2) + "%" + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")");
+			}
+			product.previousReserve = newReserve; 
+		}
+	}
 };
 
 // Add citizens
@@ -159,7 +262,15 @@ centralPlanningGame.Settlement.prototype.printLog = function() {
 }
 
 centralPlanningGame.Settlement.prototype.addDistrict = function(district) {
-	this.districts.push(district);
+	var allowed = true;
+	for (var i=0; i < this.districts.length; i++) {
+		if (this.districts[i].name === district.name) {
+			allowed = false;
+		}		
+	}
+	if (allowed === true) {
+		this.districts.push(district);
+	}
 }
 
 centralPlanningGame.Settlement.prototype.addToReserves = function(produce) {

@@ -13,4 +13,7 @@ centralPlanningGame.settingsData.standardTitleCss = {"font": "30px Arial",
 													
 centralPlanningGame.settingsData.standardGuiCss = { "padding":"10px",
 													"border-radius": "13px",
-													"background-color": "#CC1500",}; 
+													"background-color": "#CC1500",
+													"border-style": "solid",
+													"border-width": "1px",
+													}; 
