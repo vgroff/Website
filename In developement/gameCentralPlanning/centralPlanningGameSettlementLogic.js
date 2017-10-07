@@ -58,8 +58,13 @@
 // - How are the starting prices decided? Based on import prices.
 // - 
 
+
+// Do job distribution now. Have workers consider actual (long-term) happiness in a certain workplace as well as theoretical happiness they could get (from theoretically produced wage on daily basis). 
+
 centralPlanningGame.Settlement = function(name, coordinates) {
+	this.log = true;
 	this.name = name;
+	this.daysExisted = 0;
 	this.population = 0;
 	this.entrepreneurs = 0;
 	this.landFertility = 1;
@@ -70,18 +75,31 @@ centralPlanningGame.Settlement = function(name, coordinates) {
 	this.primaryEducation = 0.0;
 	this.secondaryEducation = 0.0;
 	this.districts = [];
-	this.wageLevels = [{"0":0}];
+	this.wageLevels = [{}];
+	this.wageLevelsArr = [];
+	this.savingsLevels = [{"pop":0, "savings":0}];
+	this.incomeDeciles = [];
 	this.averageWageDaily = 0;
+	this.dailyStateIncome = 0;
 	this.availableJobs = 0;
+	this.businessesEmploying = [];
+	this.unpaidWorkers = 0;
+	this.jobSeekers = 0;
 	this.citizenWealth = 0;
 	this.entrepreneurWealth = 0;
 	this.averageWage = 0;
 	this.wageStDev = 0;
+	this.meanDailyPriceChange = 0;
+	this.dailyInflation = 1;
+	this.previousDailyInflation = 1;
+	this.dailyProduction = 0;
 	this.overallHappiness = new centralPlanningGame.OverallHappiness(this);
 	this.happinessFactors = { "Food": new centralPlanningGame.FoodHappiness(this),
 							"Savings": new centralPlanningGame.SavingsHappiness(this)};
 	this.wageHappiness = [];
 	this.averageHappinessDaily = 0;
+	this.stats = {"Available Jobs":0};
+	this.politics = {"Socialists":0.5};
 	var bread = new centralPlanningGame.Bread();
 	var farmProduce = new centralPlanningGame.FarmProduce();
 	var animalProduce = new centralPlanningGame.AnimalProduce();
@@ -93,30 +111,57 @@ centralPlanningGame.Settlement = function(name, coordinates) {
 };
 
 centralPlanningGame.Settlement.prototype.updatePrices = function() {
-	var optVal = this.population;
+	var optVal = this.population*5;
+	var changeRange = this.population * 2;
+	var minOptVal = optVal - changeRange;
+	var maxOptVal = optVal + changeRange;
+	var minChange = 0.001;
+	var maxChange = 0.03;
+	var marketReactivity = 0.2;
+	var toleranceRange = 0.01;
 	console.log("\nNewDay");
+	this.meanDailyPriceChange = 0;
+	var totalProduced = 0;
+	// If I have applied inflation between now and previous time, privatePrice will be wrong
+	// ALSO, if I applied inflation the time before that, will previousPrice be off too?
+	// no increases, start at 10 -> 20 -> 40 for 100% inflation (inflation=2). I just need to clock that 20 = 20*2
 	for (var productType in this.reserves) {
 		for (var productName in this.reserves[productType]) {
 			// If product is increasing by at least 10% of current value or 10% of population value but under 95% of population, keep price
 			// If product is increasing at all and over 100% population, lower price
 			// If product is decreasing, change.
 			var product = this.reserves[productType][productName];
+			//~ if (productName === "Farm Produce") {
+				//~ console.log(productName+ " reserves are " + (product.privateOwned + product.stateOwned) );
+				//~ continue;
+			//~ }
+			if (product.dailyProduction === 0) {
+				product.daysInProduction = 0;
+			}
+			else {
+				product.daysInProduction += 1;
+			}
 			var reserveGrowth = null;
-			var elasticityHalfLife = 0.4;
-			var maxPriceGrowth = 0.08;
+			var elasticityHalfLife = 0.5;
 			var newReserve = product.privateOwned + product.stateOwned;
-			var minElasticity = 0.01;
+			var minElasticity = 0.1;
+			var minPrice = 1;
+			var maxChangeDesired = 0.03;
 			if (product.previousReserve !== null && product.previousReserve !== 0) {
 				reserveChange = newReserve/product.previousReserve - 1;
-				var maxChange = 1;
-				if (reserveChange > maxChange) {
-					reserveChange = maxChange;
+				// maxChange dampens the price effects
+				var maxResChange = 1;
+				if (reserveChange > maxResChange) {
+					reserveChange = maxResChange;
 				}
-				else if (reserveChange < -1 * maxChange) {
-					reserveChange = -maxChange;
+				else if (reserveChange < -1 * maxResChange) {
+					reserveChange = -maxResChange;
 				}
 				if (product.previousGrowth !== null && product.previousPrice !== 0) {
-					priceChange = product.privatePrice/product.previousPrice - 1;
+					priceChange = product.privatePrice/(product.previousPrice*this.previousDailyInflation) - 1;
+					this.meanDailyPriceChange += product.privatePrice/product.previousPrice * product.dailyProduction;
+					totalProduced += product.dailyProduction;
+					//console.log(this.meanDailyPriceChange, totalProduced, product.dailyProduction);
 					if (Math.abs(priceChange) > 0.000001) {
 						growthChange = reserveChange - product.previousGrowth;
 						// Want a link between how much consumption changes with price changes
@@ -128,68 +173,61 @@ centralPlanningGame.Settlement.prototype.updatePrices = function() {
 						// Here's what we also want: When price goes up but demand also goes up, elasticity should increase!
 						elasticity = (-1) * priceChange / growthChange;
 						if (elasticity > 0) {
-							elasticity = -0.1;
+							elasticity = product.priceElasticity * 3;
 						}
 						product.priceElasticity = product.priceElasticity * elasticityHalfLife + elasticity * (1 - elasticityHalfLife);
 						if (product.priceElasticity > -1 * minElasticity) {
 							product.priceElasticity = -1 * minElasticity;
 						}
-						console.log("Growth change: " + growthChange.toFixed(2) + "(" + reserveChange +", "+ product.previousGrowth +")" + ", Price change: " + (100*priceChange).toFixed(2) + "%, Elasticity: " + elasticity);
+						if (this.log) {console.log("Growth change: " + growthChange.toFixed(2) + "(" + reserveChange +", "+ product.previousGrowth +")" + ", Price change: " + (100*priceChange).toFixed(2) + "%, Elasticity: " + elasticity);}
 					}
 				}
 				product.previousGrowth = reserveChange;
-				console.log(product.title + " reserves are growing at " + (reserveChange*100).toFixed(2) + "%" + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")");
+				if (this.log) {console.log(product.title + " reserves are growing at " + (reserveChange*100).toFixed(2) + "%" + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")")};
 				//console.log(product.previousReserve, newReserve, reserveChange);
 			}
 			product.previousPrice = product.privatePrice;
-			//console.log(product, newReserve, reserveChange, product.privateOwned, product.stateOwned);
 			if (product.previousReserve !== null && product.previousReserve !== 0) {
-				if (newReserve >= optVal) {
-					var increase = product.priceElasticity * (newReserve - optVal)/(newReserve);//reserveChange;
-					var increase2 = product.priceElasticity * reserveChange;
-					if (Math.abs(increase2) > Math.abs(increase) ) {
-						increase2 = increase;
+				if ( (reserveChange < 0 && newReserve < optVal) || (reserveChange > 0 && newReserve > optVal) ) {
+					// Balance the price
+					if (newReserve < minOptVal || newReserve > maxOptVal) {
+						var increase = product.priceElasticity * reserveChange * 1.5;
+						var localMaxChange = minChange * ( Math.abs(newReserve - optVal) / changeRange )**20;
 					}
-					console.log(increase, increase2, (newReserve - optVal)/(newReserve));
-					if (Math.abs(increase) > maxPriceGrowth) {
-						if (increase > 0) {
-							increase = maxPriceGrowth;
-						}
-						else {
-							increase = -maxPriceGrowth;
-						}
+					else {
+						var increase = product.priceElasticity * reserveChange * marketReactivity;
+						var localMaxChange = minChange * ( Math.abs(newReserve - optVal) / changeRange )**2;
+					}
+					if (localMaxChange > maxChange) {
+						localMaxChange = maxChange;
+					}
+					if (increase > localMaxChange) {
+						increase = localMaxChange;
+					}
+					else if (increase < -localMaxChange) {
+						increase = -localMaxChange;
 					}
 					product.privatePrice = product.privatePrice*(1 + increase); 
-					console.log("Price for " + product.title + " changed by " + (increase*100).toFixed(2) + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")");
-				}
-				else {
-					if (reserveChange < 0) {
-						// If reserves are decreasing and el > 0, the price change will be a decrease when it should be an increase!
-						var increase = product.priceElasticity * reserveChange;
-						if (Math.abs(increase) > maxPriceGrowth) {
-							if (increase > 0) {
-								increase = maxPriceGrowth;
-							}
-							else {
-								increase = -maxPriceGrowth;
-							}
-						}
-						product.privatePrice = product.privatePrice*(1 + increase);	
-						console.log("Price for " + product.title + " changed by " + (increase*100).toFixed(2) + "%" + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")");				
-					}
-					else { 
-						let b=1;	
-					}
+					if (this.log) {console.log("Price for " + product.title + " changed by " + (increase*100).toFixed(2) + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")")};
+					//console.log(localMaxChange, optVal-changeRange, ( Math.abs(newReserve - optVal) / changeRange ));
 				}
 			}
 			else if (newReserve === 0) {
-				product.privatePrice = product.privatePrice * (1 + (maxPriceGrowth * 2) );
-				console.log("Price for " + product.title + " changed by " + (maxPriceGrowth*2*100).toFixed(2) + "%" + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")");
+				product.privatePrice = product.privatePrice * (1 + (maxChange*2) );
+				if (this.log) {console.log("Price for " + product.title + " changed by " + (maxChange*2*100).toFixed(2) + "%" + "% (P:" + product.privatePrice.toFixed(2) + ", R:" + newReserve.toFixed(2) + ", E:" + product.priceElasticity + ")")};
 			}
 			product.previousReserve = newReserve; 
+			// The smallest coin is of value 1, nothing can drop below this.
+			if (product.privatePrice < 1) {
+				product.privatePrice = 1;
+			}
+			product.privatePrice *= this.dailyInflation;
 		}
 	}
+	this.meanDailyPriceChange = this.meanDailyPriceChange / totalProduced;
+	this.dailyProduction = totalProduced;
 };
+
 
 // Add citizens
 centralPlanningGame.Settlement.prototype.addCitizens = function(number) {
@@ -198,8 +236,297 @@ centralPlanningGame.Settlement.prototype.addCitizens = function(number) {
 }
 
 // Things are produced throughout the day
-centralPlanningGame.Settlement.prototype.updateSettlement = function() {
-
+centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
+	this.log = log;
+	var settlement = this;
+	var production = [];
+	var reserves = settlement.reserves;
+	for (var reserveType in settlement.reserves) {
+		for (var reserve in settlement.reserves[reserveType]) {
+			var product = settlement.reserves[reserveType][reserve];
+			product.dailyProduction = 0;
+			product.dailyStateProduction = 0;
+			product.dailyPrivateProduction = 0;
+			product.dailyExcessDemand = 0;
+		}
+	}
+	// To make the changes both more realistic and more gradual, only 5% of the workforce changes job each turn.
+	// These guys are pooled together, and then they cycle over the settlement.wageLevels (previous turns wages) and fill those jobs in.
+	// We need to know the total number of unemployed when we start, maybe we do this the turn before. Then we go over the wage array backwards and count the population as we go to correct for errors.
+	// If I have a business with spare jobs, keep it in an array. Then sort the array by wage. Then consider the unemployed, then go along the bottom of wageLevel companies, and do the thing from before.
+	this.businessesEmploying.sort( function(a,b) {
+		return b.getOptimumWage(settlement)-a.getOptimumWage(settlement);
+	});
+	//console.log(this.businessesEmploying);
+	if (settlement.availableJobs > 0) {
+		if (settlement.wageLevelsArr[0]["businesses"]) {
+			var wageIndex = 0;
+			var unemployed = settlement.wageLevelsArr[0]["unemployed"];
+			var noIncome = settlement.wageLevelsArr[0]["pop"] - unemployed;
+		}
+		else {
+			var unemployed = settlement.wageLevelsArr[0]["pop"];
+			var noIncome = 0;
+			var wageIndex = 1;
+		}
+		var bussIndex2 = 0;
+		var done = false;
+		for (var bussIndex = 0; bussIndex < settlement.businessesEmploying.length; bussIndex++ ) {
+			var business = settlement.businessesEmploying[bussIndex];
+			var vacancies = business.availableJobs - business.numberWorkers;
+			if (unemployed >= vacancies) {
+				unemployed -= vacancies;
+				business.numberWorkers = business.availableJobs;
+				vacancies = 0;
+			}
+			else {
+				vacancies -= unemployed;
+				business.numberWorkers += unemployed;
+				unemployed = 0;
+				while (vacancies > 0) { 
+					var business2 = settlement.wageLevelsArr[wageIndex]["businesses"][bussIndex2];
+					if (business.getOptimumWage(settlement) < business2.getOptimumWage(settlement)) { // If wage is smaller at the new place, forget about it.
+						done = true;
+						break;
+					}
+					else {
+						var arr = [business2.numberWorkers*0.1, business2.availableJobs*0.05];
+						var waveringEmployees = 2;
+						for (var arrIndex = 0; arrIndex < arr.length; arrIndex++) {
+							if (arr[arrIndex] > waveringEmployees) {
+								waveringEmployees = arr[arrIndex];
+							}
+						}
+						if (waveringEmployees > business2.numberWorkers) {
+							waveringEmployees = business2.numberWorkers;
+						}
+						if (waveringEmployees >= vacancies) {
+							business2.numberWorkers -= vacancies;
+							business.numberWorkers = business.availableJobs;
+							vacancies = 0;
+						}
+						else {
+							vacancies -= waveringEmployees;
+							business2.numberWorkers -= waveringEmployees;
+							business.numberWorkers += waveringEmployees;
+							bussIndex2++;
+							if (bussIndex2 >= settlement.wageLevelsArr[wageIndex]["businesses"].length) {
+								done = true;
+								break;
+							}
+						}
+					}
+				}
+			}
+			if (done === true) {
+				break;
+			}
+		}
+	}
+	settlement.wageLevels = {};
+	settlement.dailyStateIncome = 0;
+	settlement.unpaidWorkers = 0;
+	settlement.businessesEmploying = [];
+	var unemployed = settlement.population;
+	// Distribute the education here
+	for (buildingName in settlement.production) {
+		var privateDailyIncome = 0;
+		var privateDailyWages = 0;
+		var industry = settlement.production[buildingName];
+		industry["dailyIncome"] = 0;
+		// Cycle over individual businesses, sell stuff and pay out wages, then calculate wage levels and income gaps
+		for (businessIndex in industry["buildings"]) {
+			var business = industry["buildings"][businessIndex];
+			console.log(business.title + " has " + business.numberWorkers + " workers");
+			//business.dailyIncome = 0;
+			unemployed -= business.numberWorkers;
+			var freeJobs = business.availableJobs - business.numberWorkers;
+			settlement.availableJobs += freeJobs;
+			if (freeJobs > 0) {
+				settlement.businessesEmploying.push(business);
+			}
+			var product = business.produce();
+			var reserve = reserves[product.type][product.title];
+			settlement.addToReserves(product);
+			var income = 0;
+			if (business.ownedBy === "state") {
+				income = product.stateOwned*reserve.statePrice;
+				settlement.dailyStateIncome += income;
+				business.totalUnitsProduced += product.stateOwned;
+				business.dailyUnitsProduced = product.stateOwned;
+			}
+			else {
+				income = product.privateOwned*reserve.privatePrice;
+				business.totalUnitsProduced += product.privateOwned;
+				business.dailyUnitsProduced = product.privateOwned;
+			}
+			business.totalIncome += income;
+			business.dailyIncome = income;
+			var wage = business.getWage(business.totalIncome - business.totalExpenses, this.averageWage);
+			if (wage < 0.0001) {
+				settlement.unpaidWorkers += business.numberWorkers;
+			}
+			business.stats["wage"][0] = wage * (1 - centralPlanningGame.timeModifiers[0]) + business.stats["wage"][0] * centralPlanningGame.timeModifiers[0];
+			business.stats["daysExisted"] += 1;
+			//console.log(business.title, product, wage, business.totalIncome - business.totalExpenses);
+			var wageStr = wage.toString();
+			business.dailyExpenses = wage*business.numberWorkers;
+			business.totalExpenses += wage*business.numberWorkers;
+			business.dailyProfits = business.dailyIncome - wage*business.numberWorkers;
+			if (business.ownedBy === "private") {
+				settlement.entrepreneurWealth += business.dailyIncome - business.dailyExpenses;
+			}
+			if (settlement.wageLevels[wageStr]) {
+				settlement.wageLevels[wageStr]["pop"] += business.numberWorkers;
+				settlement.wageLevels[wageStr]["popDummy"] += business.numberWorkers;
+				settlement.wageLevels[wageStr]["businesses"].push(business);
+			}
+			else {
+				settlement.wageLevels[wageStr] = {"wage": parseFloat(wage), "pop": business.numberWorkers, "popDummy": business.numberWorkers, "savings":0, "businesses":[business] };
+			}
+			reserve.totalUnitsProduced += product.stateOwned+product.privateOwned;
+			reserve.dailyProduction += product.stateOwned+product.privateOwned;
+			reserve.dailyStateProduction += product.stateOwned;
+			reserve.dailyPrivateProduction += product.privateOwned;
+		}	
+	}
+	settlement.unemployed = unemployed;
+	if (settlement.wageLevels["0"]) {
+		settlement.wageLevels["0"]["pop"] += unemployed;
+		settlement.wageLevels["0"]["popDummy"] += unemployed;
+		settlement.wageLevels["0"]["unemployed"] = unemployed;
+	}
+	else {
+		settlement.wageLevels["0"] = {"wage": 0, "pop": unemployed, "popDummy": unemployed, "savings":0 };
+	}
+	var wageArr = [];
+	for (var wage in settlement.wageLevels) {
+		wageArr.push(settlement.wageLevels[wage]);
+	}
+	wageArr.sort( function(a,b) {
+		return a["wage"]-b["wage"];
+	});
+	//console.log(wageArr);
+	// Match up savings with wages
+	var wageIndex = wageArr.length - 1;
+	for (var savingsIndex = this.savingsLevels.length-1; savingsIndex >= 0; savingsIndex--) {
+		var savings = this.savingsLevels[savingsIndex]["savings"];
+		var pop = this.savingsLevels[savingsIndex]["pop"];
+		while (savings > 0.00001) {
+			// If more pop in wage array, transfer all savings
+			if (wageArr[wageIndex]["popDummy"] > pop) {
+				wageArr[wageIndex]["popDummy"] -= pop;
+				wageArr[wageIndex]["savings"] += savings;
+				savings = 0;
+			}
+			// else, do proportionally
+			else {
+				var ratio = wageArr[wageIndex]["popDummy"] / pop;
+				wageArr[wageIndex]["savings"] += savings * ratio;
+				pop -= wageArr[wageIndex]["popDummy"];
+				savings -= savings*ratio;
+				wageIndex--;
+			}
+			if (wageIndex < 0) {
+				break;
+			}
+		}
+	}
+	console.log(wageArr);
+	//console.log(settlement.reserves["Food"]["Farm Produce"].privateOwned);
+	var originalPopulation = settlement.population;
+	settlement.averageWageDaily = 0;
+	settlement.averageHappinessDaily = 0;
+	settlement.citizenWealth = 0;
+	this.savingsLevels = [];
+	for (var wageIndex=0; wageIndex < wageArr.length; wageIndex++) {
+		// Given that wageLevels is in ascending order, we get maxHappiness spending, remove the amount needed from the reserves, pay the industry and update the population left.
+		var wage = wageArr[wageIndex]["wage"];
+		var wagePop = wageArr[wageIndex]["pop"];
+		var savings = wageArr[wageIndex]["savings"]/wagePop;
+		var income = wage+savings;
+		settlement.averageWageDaily += wage*wagePop/originalPopulation;
+		var spending = settlement.overallHappiness.getSpending(wage+savings, true); 
+		var moneySaved = 0;
+		//console.log(spending);
+		wageArr[wageIndex]["happinessKeys"] = spending["keys"];
+		wageArr[wageIndex]["happinessAmounts"] = [];
+		wageArr[wageIndex]["wagesSpent"] = [];
+		var totalSpent = 0
+		for (var happinessKeyIndex=0; happinessKeyIndex<spending["keys"].length; happinessKeyIndex++) {
+			var happinessType = spending["keys"][happinessKeyIndex];
+			if (happinessType !== "Savings") {
+				var result = settlement.happinessFactors[happinessType].getSpending(spending["wagesSpent"][happinessKeyIndex]);
+				//console.log(result);
+				wageArr[wageIndex]["happinessAmounts"].push(result["value"]);
+				wageArr[wageIndex][happinessType] = {};
+				wageArr[wageIndex][happinessType]["keys"] = result["keys"];
+				wageArr[wageIndex][happinessType]["amounts"] = [];
+				wageArr[wageIndex][happinessType]["wagesSpent"] = [];;
+				for (var keyIndex=0; keyIndex<result["keys"].length; keyIndex++) {
+					var productName = result["keys"][keyIndex];
+					var product = settlement.reserves[happinessType][productName];
+					var moneySpent = result["wagesSpent"][keyIndex];
+					var amountBought = result["amountBought"][keyIndex];
+					var bought = settlement.buyCheapestMaxAmount(product, moneySpent); 
+					product.privateOwned -= bought[1]*wagePop;
+					product.stateOwned -= bought[0]*wagePop;
+					totalSpent += bought[2];
+					//moneySaved += (moneySpent - bought[2]);
+					wageArr[wageIndex][happinessType]["amounts"].push(bought[0]+bought[1]);
+					wageArr[wageIndex][happinessType]["wagesSpent"].push(bought[2]);
+				}
+				wageArr[wageIndex]["wagesSpent"].push(totalSpent);
+				//moneySaved += (spending["wagesSpent"][happinessKeyIndex] - totalSpent);
+				//console.log(totalSpent,spending["wagesSpent"][happinessKeyIndex]);
+			}
+			else {
+				var savingsKeyIndex = happinessKeyIndex;
+				wageArr[wageIndex]["wagesSpent"].push(0);
+				wageArr[wageIndex]["happinessAmounts"].push(0);
+			}
+		}
+		var totalSaved  = income - totalSpent;
+		if (totalSaved < 0) { 
+			totalSaved = 0;
+		}
+		this.savingsLevels.push({"savings":totalSaved*wagePop, "pop":wagePop});
+		//console.log(this.savingsLevels);
+		settlement.citizenWealth += wagePop*totalSaved;// Make citizen savings
+		wageArr[wageIndex]["happinessAmounts"][savingsKeyIndex] = settlement.happinessFactors["Savings"].calcHappiness(totalSaved, income)["value"];
+		wageArr[wageIndex]["wagesSpent"][savingsKeyIndex] = totalSaved;
+		var overall = settlement.overallHappiness.calcHappiness(wageArr[wageIndex]["happinessAmounts"], wageArr[wageIndex]["happinessKeys"]);
+		//console.log(overall, wageArr[wageIndex]["wagesSpent"][savingsKeyIndex]);
+		wageArr[wageIndex]["overallHappiness"] = overall["value"];
+		settlement.averageHappinessDaily += overall["value"] * wagePop / originalPopulation;
+		// CALCULATE SAVINGS HAPPINESS WITH THINGY REMOVED
+		//console.log(spending, wage);
+		settlement.population -= wagePop; // Need to update before this stuff will work
+	}
+	this.wageLevelsArr = wageArr;
+	//console.log(wageArr);
+	//console.log(settlement.reserves["Food"]["Farm Produce"].privateOwned);
+	var production = Object.keys(settlement.production);
+	shuffleArray(production); // Allows different industries first access
+	for (var arrIndex=0; arrIndex<production.length; arrIndex++) {
+		var industryKey = production[arrIndex];
+		var industry = settlement.production[industryKey];
+		// Cycle over businesses, buying inputs
+		for (businessIndex in industry["buildings"]) {
+			var business = industry["buildings"][businessIndex];
+			var inputs = business.buyInputs(settlement, true);
+			for (inputIndex in inputs) {
+				var reserve = settlement.reserves[inputs[inputIndex]["input"].type][inputs[inputIndex]["input"].title];
+				reserve.dailyExcessDemand += inputs[inputIndex]["excessDemand"];
+				//console.log(inputs[inputIndex]["excessDemand"]);
+			}
+		}
+	}
+	settlement.population = originalPopulation;
+	settlement.wageHappiness = wageArr;
+	//console.log(reserves);
+	//settlement.printLog();
+	settlement.updatePrices();
 }
 
 centralPlanningGame.Settlement.prototype.addBuilding = function(district, building) {

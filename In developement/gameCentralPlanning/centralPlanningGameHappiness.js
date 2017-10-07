@@ -114,16 +114,22 @@ centralPlanningGame.OverallHappiness.prototype.constructor = centralPlanningGame
 
 centralPlanningGame.OverallHappiness.prototype.calcHappiness = function(happinessAmount, happinessKeys) {
 	var totalHappiness = 0;
-	var foodWeighting = 0.33;
-	var savingsWeighting = 0.05;
+	var foodWeighting = 10;
+	var savingsWeighting = 1;
+	var totalWeighting = foodWeighting + savingsWeighting;
+	var overallModifier = 1;
 	for (var i=0; i<happinessKeys.length; i++) {
 		if (happinessKeys[i] === "Food") {
-			totalHappiness += happinessAmount[i]*foodWeighting;
+			totalHappiness += happinessAmount[i]*foodWeighting/totalWeighting;
+			if (happinessAmount[i] < 0.35) {
+				overallModifier *= (happinessAmount[i]/0.35)**2 
+			}
 		}
 		else if (happinessKeys[i] === "Savings") {
-			totalHappiness += happinessAmount[i]*savingsWeighting;
+			totalHappiness += happinessAmount[i]*savingsWeighting/totalWeighting;
 		}
 	}
+	totalHappiness *= overallModifier;
 	return {"value":totalHappiness};
 };
 
@@ -227,10 +233,10 @@ centralPlanningGame.FoodHappiness.prototype.calcHappiness = function(foodsBought
 	else {
 		quality = 0;
 	}
-	var quantityFactor = quantity**0.85;
+	var quantityFactor = quantity**0.75;
 	var qualityFactor = quality**1.7;
 	if (qualityFactor > 1.1) { qualityFactor = 1.1; } // High quality food means people need to eat a little less
-	var foodHappiness = 0.3*quantityFactor + 0.7*quantityFactor*qualityFactor;
+	var foodHappiness = 0.35*quantityFactor + 0.65*quantityFactor*qualityFactor;
 	if (foodHappiness > 1) { foodHappiness = 1;}
 	//console.log(foodsBought, foodHappiness);
 	if (save === true) {
@@ -422,7 +428,7 @@ centralPlanningGame.SavingsHappiness.prototype.constructor = centralPlanningGame
 
 centralPlanningGame.SavingsHappiness.prototype.calcHappiness = function(moneySpent, wage) {
 	if (wage > 0) {
-		var happiness = (moneySpent/wage)**0.6;
+		var happiness = (moneySpent/wage)**0.8;
 		return {"value":happiness};
 	}
 	else {

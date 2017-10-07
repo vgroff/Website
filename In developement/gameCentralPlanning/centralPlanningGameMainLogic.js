@@ -13,6 +13,9 @@ centralPlanningGame.mainLogic = function() {
 	this.startDate = new Date(1917, 9, 25, 0, 0, 0,0);
 	this.startTime = this.startDate.getTime();
 	this.date = new Date(this.startDate);
+	this.log = true;
+	
+	this.nationalInflation = [1,1,1];
 	
 	this.settlements = [];
 	//this.openWindows = [];
@@ -20,7 +23,8 @@ centralPlanningGame.mainLogic = function() {
 	
 	this.addSettlement("Leningrad", [100,100]);
 	demoSettlement = this.settlements[0];
-	demoSettlement.population = 150;
+	//demoSettlement.population = 160;
+	demoSettlement.population = 40;
 	var bread = new centralPlanningGame.Bread();
 	var farmProduce = new centralPlanningGame.FarmProduce();
 	var processedFoods = new centralPlanningGame.ProcessedFoods();
@@ -30,37 +34,40 @@ centralPlanningGame.mainLogic = function() {
 	//farmProduce.privateOwned = 100;
 	demoSettlement.addToReserves( farmProduce );
 	demoSettlement.reserves["Food"]["Farm Produce"].privatePrice = 10;
-	demoSettlement.reserves["Food"]["Farm Produce"].privateOwned = 50;
-	demoSettlement.reserves["Food"]["Bread"].privatePrice = 15;
-	demoSettlement.reserves["Food"]["Bread"].privateOwned = 50;
-	demoSettlement.reserves["Food"]["Animal Produce"].privatePrice = 20;
-	demoSettlement.reserves["Food"]["Animal Produce"].privateOwned = 50;
+	demoSettlement.reserves["Food"]["Farm Produce"].privateOwned = 450;
+	demoSettlement.reserves["Food"]["Bread"].privatePrice = 14;
+	demoSettlement.reserves["Food"]["Bread"].privateOwned = 450;
+	demoSettlement.reserves["Food"]["Animal Produce"].privatePrice = 25;
+	demoSettlement.reserves["Food"]["Animal Produce"].privateOwned = 450;
 	//demoSettlement.happinessFactors["Food"].getSpending(10);
 	demoSettlement.overallHappiness.getSpending(10, true);
 	var district = new centralPlanningGame.District("Town Center", 150);
 	demoSettlement.addDistrict(district);
-	var nStripFarms = 4;
+	var nStripFarms = 2;
 	for (var i=0; i < nStripFarms; i++) {
 		var stripFarm = new centralPlanningGame.StripFarms(this.date);
-		stripFarm.numberWorkers = 20;
+		stripFarm.numberWorkers = 10;
 		demoSettlement.addBuilding(district, stripFarm);
 	}
-	var nBakeries = 1;
+	var nBakeries = 2;
 	for (var i=0; i < nBakeries; i++) {
-		var bakery = new centralPlanningGame.SmallBakery(this.date);
-		bakery.numberWorkers = 10;
+		var bakery = new centralPlanningGame.BasicBakery(this.date);
+		bakery.numberWorkers = 5;
 		demoSettlement.addBuilding(district, bakery);
 	}
 	var district2 = new centralPlanningGame.District("District 1", 150);
 	demoSettlement.addDistrict(district2);
-	var nStripFarms = 2;
-	for (var i=0; i < nStripFarms; i++) {
-		var stripFarm = new centralPlanningGame.StripFarms(this.date);
-		stripFarm.numberWorkers = 20;
-		demoSettlement.addBuilding(district2, stripFarm);
-	}
-	var smallCoop = new centralPlanningGame.SmallCoop(this.date);
-	smallCoop.numberWorkers = 10;
+	//~ var nStripFarms = 2;
+	//~ for (var i=0; i < nStripFarms; i++) {
+		//~ var stripFarm = new centralPlanningGame.StripFarms(this.date);
+		//~ stripFarm.numberWorkers = 20;
+		//~ demoSettlement.addBuilding(district2, stripFarm);
+	//~ }
+	var smallCoop = new centralPlanningGame.HuntingCabin(this.date);
+	smallCoop.numberWorkers = 5;
+	demoSettlement.addBuilding(district2, smallCoop);
+	var smallCoop = new centralPlanningGame.HuntingCabin(this.date);
+	smallCoop.numberWorkers = 0;
 	demoSettlement.addBuilding(district2, smallCoop);
 	//demoSettlement.addBuilding(district, gatheringHut);
 	this.buildGUI();
@@ -94,7 +101,7 @@ centralPlanningGame.mainLogic.prototype.updateStage = function() {
 	this.stage.update();
 };
 
-centralPlanningGame.mainLogic.prototype.updateDaily = function() {
+centralPlanningGame.mainLogic.prototype.updateDaily = function(guiUpdate) {
 	this.gameDay += 1
 	this.dayTime = 0;
 	var newDate = new Date(this.date);
@@ -113,171 +120,44 @@ centralPlanningGame.mainLogic.prototype.updateDaily = function() {
 	// If we have traders buying all, what do we do about state prices? e.g. when does the money hit the state coffers? Still want it to keep up with money supply, so perhaps when just when the trader buys.
 	// But what if no one is buying the stuff? Could there be an upper limit on reserves
 	// STATE PRICES:Instead of fixing a state price, could offer subsidies to consumers. OR allow state price to drop from a baseStatePrice, but not increase!!! i.e. can fix a MAXIMUM state price.
+	var inflationTotal = 0;
+	var totalProduced  = 0;
 	for (var i=0; i < this.settlements.length; i++) {
-		var settlement = this.settlements[i];
-		var production = [];
-		var reserves = settlement.reserves;
-		for (var reserveType in settlement.reserves) {
-			for (var reserve in settlement.reserves[reserveType]) {
-				var product = settlement.reserves[reserveType][reserve];
-				product.dailyProduction = 0;
-				product.dailyStateProduction = 0;
-				product.dailyPrivateProduction = 0;
-				product.dailyExcessDemand = 0;
-			}
-		}
-		// NEW: Want trader to buy from everyone first, then sell.
-		// Cycle over industries
-		//~ for (industryIndex in settlement.production) {
-			
-		//~ }	
-		settlement.wageLevels = {};
-		var unemployed = settlement.population;
-		for (buildingName in settlement.production) {
-			var privateDailyIncome = 0;
-			var privateDailyWages = 0;
-			var industry = settlement.production[buildingName];
-			industry["dailyIncome"] = 0;
-			// Cycle over individual businesses, sell stuff and pay out wages, then calculate wage levels and income gaps
-			for (businessIndex in industry["buildings"]) {
-				var business = industry["buildings"][businessIndex];
-				//business.dailyIncome = 0;
-				unemployed -= business.numberWorkers;
-				var product = business.produce();
-				var reserve = reserves[product.type][product.title];
-				settlement.addToReserves(product);
-				var income = 0;
-				if (business.ownedBy === "state") {
-					income = product.stateOwned*reserve.statePrice;
-					this.stateCoffers += income;
-					business.totalUnitsProduced += product.stateOwned;
-					business.dailyUnitsProduced = product.stateOwned;
-				}
-				else {
-					income = product.privateOwned*reserve.privatePrice;
-					business.totalUnitsProduced += product.privateOwned;
-					business.dailyUnitsProduced = product.privateOwned;
-				}
-				business.totalIncome += income;
-				business.dailyIncome = income;
-				var wage = business.getWage(business.totalIncome - business.totalExpenses);
-				var wageStr = wage.toString();
-				business.dailyExpenses = wage*business.numberWorkers;
-				business.totalExpenses += wage*business.numberWorkers;
-				business.dailyProfits = business.dailyIncome - wage*business.numberWorkers;
-				if (business.ownedBy === "private") {
-					settlement.entrepreneurWealth += business.dailyIncome - business.dailyExpenses;
-				}
-				if (settlement.wageLevels[wageStr]) {
-					settlement.wageLevels[wageStr] += business.numberWorkers;
-				}
-				else {
-					settlement.wageLevels[wageStr] = business.numberWorkers;
-				}
-				reserve.totalUnitsProduced += product.stateOwned+product.privateOwned;
-				reserve.dailyProduction += product.stateOwned+product.privateOwned;
-				reserve.dailyStateProduction += product.stateOwned;
-				reserve.dailyPrivateProduction += product.privateOwned;
-			}	
-			//console.log(reserves[product.type][product.title]);		 
-		}
-		settlement.unemployed = unemployed;
-		if (settlement.wageLevels["0"]) {
-			settlement.wageLevels["0"] += unemployed;
-		}
-		else {
-			settlement.wageLevels["0"] = unemployed;
-		}
-		var wageArr = [];
-		for (var wage in settlement.wageLevels) {
-			wageArr.push({"wage": parseFloat(wage), "pop":settlement.wageLevels[wage]});
-		}
-		wageArr.sort( function(a,b) {
-			return a["wage"]-b["wage"];
-		});
-		//console.log(settlement.reserves["Food"]["Farm Produce"].privateOwned);
-		var originalPopulation = settlement.population;
-		settlement.averageWageDaily = 0;
-		settlement.averageHappinessDaily = 0;
-		for (var wageIndex=0; wageIndex < wageArr.length; wageIndex++) {
-			// Given that wageLevels is in ascending order, we get maxHappiness spending, remove the amount needed from the reserves, pay the industry and update the population left.
-			var wage = wageArr[wageIndex]["wage"];
-			var wagePop = wageArr[wageIndex]["pop"];
-			settlement.averageWageDaily += wage*wagePop/originalPopulation;
-			var spending = settlement.overallHappiness.getSpending(wage, true); 
-			var moneySaved = 0;
-			wageArr[wageIndex]["happinessKeys"] = spending["keys"];
-			wageArr[wageIndex]["happinessAmounts"] = [];
-			wageArr[wageIndex]["wagesSpent"] = [];
-			for (var happinessKeyIndex=0; happinessKeyIndex<spending["keys"].length; happinessKeyIndex++) {
-				var happinessType = spending["keys"][happinessKeyIndex];
-				if (happinessType !== "Savings") {
-					var result = settlement.happinessFactors[happinessType].getSpending(spending["wagesSpent"][happinessKeyIndex]);
-					wageArr[wageIndex]["happinessAmounts"].push(result["value"]);
-					wageArr[wageIndex][happinessType] = {};
-					wageArr[wageIndex][happinessType]["keys"] = result["keys"];
-					wageArr[wageIndex][happinessType]["amounts"] = [];
-					wageArr[wageIndex][happinessType]["wagesSpent"] = [];
-					var totalSpent = 0;
-					for (var keyIndex=0; keyIndex<result["keys"].length; keyIndex++) {
-						var productName = result["keys"][keyIndex];
-						var product = settlement.reserves[happinessType][productName];
-						var moneySpent = result["wagesSpent"][keyIndex];
-						var amountBought = result["amountBought"][keyIndex];
-						var bought = settlement.buyCheapestMaxAmount(product, moneySpent); 
-						product.privateOwned -= bought[1]*wagePop;
-						product.stateOwned -= bought[0]*wagePop;
-						totalSpent += bought[2];
-						moneySaved += (moneySpent - bought[2]);
-						wageArr[wageIndex][happinessType]["amounts"].push(bought[0]+bought[1])
-						wageArr[wageIndex][happinessType]["wagesSpent"].push(bought[2])
-					}
-					wageArr[wageIndex]["wagesSpent"].push(totalSpent);
-					//console.log(result);
-				}
-				else {
-					var savingsKeyIndex = happinessKeyIndex;
-					wageArr[wageIndex]["wagesSpent"].push(0);
-					wageArr[wageIndex]["happinessAmounts"].push(0);
-				}
-			}
-			var totalSaved  = spending["wagesSpent"][savingsKeyIndex] + moneySaved;
-			settlement.citizenWealth += wagePop*totalSaved;// Make citizen savings
-			wageArr[wageIndex]["happinessAmounts"][savingsKeyIndex] = settlement.happinessFactors["Savings"].calcHappiness(totalSaved, wage)["value"];
-			wageArr[wageIndex]["wagesSpent"][savingsKeyIndex] = totalSaved;
-			var overall = settlement.overallHappiness.calcHappiness(wageArr[wageIndex]["happinessAmounts"], wageArr[wageIndex]["happinessKeys"]);
-			wageArr[wageIndex]["overallHappiness"] = overall["value"];
-			settlement.averageHappinessDaily += overall["value"] * wagePop / originalPopulation;
-			// CALCULATE SAVINGS HAPPINESS WITH THINGY REMOVED
-			//console.log(spending, wage);
-			settlement.population -= wagePop; // Need to update before this stuff will work
-		}
-		//console.log(wageArr);
-		//console.log(settlement.reserves["Food"]["Farm Produce"].privateOwned);
-		var production = Object.keys(settlement.production);
-		shuffleArray(production); // Allows different industries first access
-		for (var arrIndex=0; arrIndex<production.length; arrIndex++) {
-			var industryKey = production[arrIndex];
-			var industry = settlement.production[industryKey];
-			// Cycle over businesses, buying inputs
-			for (businessIndex in industry["buildings"]) {
-				var business = industry["buildings"][businessIndex];
-				var inputs = business.buyInputs(settlement, true);
-				for (inputIndex in inputs) {
-					var reserve = settlement.reserves[inputs[inputIndex]["input"].type][inputs[inputIndex]["input"].title];
-					reserve.dailyExcessDemand += inputs[inputIndex]["excessDemand"];
-					//console.log(inputs[inputIndex]["excessDemand"]);
-				}
-			}
-		}
-		settlement.population = originalPopulation;
-		settlement.wageHappiness = wageArr;
-		//console.log(reserves);
-		//settlement.printLog();
-		settlement.updatePrices();
+		this.settlements[i].updateDaily(guiUpdate);
+		this.settlements[i].previousDailyInflation = this.settlements[i].dailyInflation;
+		this.settlements[i].dailyInflation = 1;
+		inflationTotal += this.settlements[i].meanDailyPriceChange*this.settlements[i].dailyProduction;
+		totalProduced  += this.settlements[i].dailyProduction;
 	}
+	// Inflation dampener (if hard currency desired)
+	if (totalProduced > 0) {
+		var result = inflationTotal/totalProduced;
+		this.nationalInflation[0] = result * (1 - centralPlanningGame.timeModifiers[0]) + this.nationalInflation[0] * centralPlanningGame.timeModifiers[0] ;
+		this.nationalInflation[1] = result * (1 - centralPlanningGame.timeModifiers[1]) + this.nationalInflation[1] * centralPlanningGame.timeModifiers[1] ;
+		this.nationalInflation[2] = result * (1 - centralPlanningGame.timeModifiers[2]) + this.nationalInflation[2] * centralPlanningGame.timeModifiers[2] ;
+		//~ if (this.nationalInflation[1] > 1.005) {
+			//~ for (var i=0; i < this.settlements.length; i++) {
+				//~ this.settlements[i].dailyInflation = 0.99;
+			//~ } 
+			//~ console.log("PRICES DROPPED!");
+		//~ }
+		//~ else if (this.nationalInflation[1] < 0.995) {
+			//~ for (var i=0; i < this.settlements.length; i++) {
+				//~ this.settlements[i].dailyInflation = 1.01;
+			//~ }	
+			//~ console.log("PRICES RAISED!");		
+		//~ }
+	}
+	//console.log("Inflation today is " + result + " " + this.nationalInflation, result * centralPlanningGame.timeModifiers[0], this.nationalInflation[1] > 1.01 );
 	//console.log("State coffers: ", this.stateCoffers);
-	this.updateGUIDaily();
+	if (guiUpdate) {this.updateGUIDaily();}
+};
+
+centralPlanningGame.mainLogic.prototype.skipDays = function(days) {
+	for (var i=0; i < days-1; i++) {
+		this.updateDaily(false);
+	}
+	this.updateDaily(true)
 };
 
 centralPlanningGame.mainLogic.prototype.addSettlement = function(name, coords) {
@@ -304,8 +184,10 @@ centralPlanningGame.mainLogic.prototype.addEvent = function(timeFromStart, event
 
 centralPlanningGame.mainLogic.prototype.buildGUI = function() {
 	if (this.debug) {console.log("Building GUI");}
-	this.guiClock = new centralPlanningGame.DisplayGui(this.stage, [0, 600], [180,40], null, null, true, {"text":this.date.toString().slice(4, 15), "textCss": {"font": "20px Arial", "margin-top": "7px"}});
-	this.nextDayButton = new centralPlanningGame.ButtonGui(this.stage, [0, 660], [180, 40], this.updateDaily.bind(this), true, {"text": "Next Day"});
+	this.guiClock = new centralPlanningGame.DisplayGui(this.stage, [0, 540], [180,40], null, null, true, {"text":this.date.toString().slice(4, 15), "textCss": {"font": "20px Arial", "margin-top": "7px"}});
+	this.nextDayButton = new centralPlanningGame.ButtonGui(this.stage, [0, 600], [180, 40], this.updateDaily.bind(this, true), true, {"text": "Next Day"});
+	this.nextWeekButton = new centralPlanningGame.ButtonGui(this.stage, [0, 650], [180, 40], this.skipDays.bind(this, 7), true, {"text": "Next Week"});
+	this.nextWeekButton = new centralPlanningGame.ButtonGui(this.stage, [0, 700], [180, 40], this.skipDays.bind(this, 30), true, {"text": "Next Month"});
 	//this.intro = new centralPlanningGame.TitleTextGui(this.stage, [50, 80], [300, 200], null, null, true, {"title": "Hello!", "text": "Welcome.", "textCss": {"font": "20px Arial", "margin-top": "7px"}});
 };
 
@@ -343,9 +225,22 @@ centralPlanningGame.mainLogic.prototype.updateGUIDaily = function() {
 // CHANGE
 //  for imports/exports have traders trading with each other. What to do with extra money? Could it go to delivery people? Could the traders just keep it?
 
+// CURRENT WORK ON PRICE STABILISATION:
+// We hold 3 days worth of all consumer goods (everything is a direct cosumer good atm). We say that if the current reserve is between 2.5 and 3.5 * pop,
+// all we do is try to stabilise it. If it falls under 2.5 or grows over 3.5, we then try and change the supply up/down as aggressively as possible.
+
 // Notes for future:
 // - Look into caching for improved graphic performance? (not immediately important0
 // - Make sure that naming collisions are covered, since this could be a problem.
+
+// IDEAS FOR POLITICS:
+// Could have aswell as an innate political "centre", and a "stability" std.dev for the resulting normal distribution for both left/right economically and liberal/authoritarian. 
+// Also similar thing for political apathy of ideology (people who just want a decent life)
+// Then we generate 500 voters for each election and make them "vote" depending on how their life is going and how you are respoding to their ideology.
+// Depening on political situation, they may vote for 3 different parties besides yourself, who position themselves in opposition to you.
+// You can then form a "coalition" with a single one of the 2 parties closest to yourself ideologically. You are then given a year to prove yourself,
+// at which point your coalition partners may abandon you and call a new election. If you cannot make up 50% of the vote, you lose.
+// The political centre may also move or the ditribution may narrow or widen depending on whether people think you are doing a good job running the country.
 
 // COMMENTS FOR WHEN LOOKING BACK:
 // - Game is centered around settlements and their traders. Population work jobs at "Production" Buildings to earn a wage, the buildings sell their produce to the trader

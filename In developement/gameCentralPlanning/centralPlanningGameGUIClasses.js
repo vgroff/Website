@@ -71,7 +71,7 @@ centralPlanningGame.SettlementOverviewGui = function(settlement) {
 	this.type = "overview";
 	var template = _.template(
 	"<p>Population: <%= settlement.population %></p>\
-	<p>Unemployed: <%= settlement.unemployed %> (<%= 100*settlement.unemployed/settlement.population %>%)</p>\
+	<p>Unemployed: <%= settlement.unemployed %> (<%= (100*settlement.unemployed/settlement.population).toFixed(2) %>%)</p>\
 	<p>Mean Wage: <%= settlement.averageWageDaily.toFixed(2) %></p>\
 	<p>Mean Happiness: <%= settlement.averageHappinessDaily.toFixed(3) %></p>\
 	<p>Citizen Savings: <%= settlement.citizenWealth.toFixed(0) %></p>\
@@ -91,7 +91,7 @@ centralPlanningGame.SettlementHappinessGui = function(settlement) {
 	for (var i=0; i < wageArr.length; i++) {
 		var result = wageArr[i];
 		var div = $("<div class=\"centralGui wageLevelDiv\"> </div>");
-		var income    = $("<h5> Income: " + wageArr[i]["wage"].toPrecision(3) + "</h5>");
+		var income    = $("<h5> Total Income: " + (wageArr[i]["savings"]/wageArr[i]["pop"] + wageArr[i]["wage"]).toPrecision(3) + "</h5>");
 		var happiness = $("<h5> Happiness: " + wageArr[i]["overallHappiness"].toFixed(3) + "</h5>");
 		var citizens  = $("<h5> Citizens: " + wageArr[i]["pop"]+ "</h5>");
 		var moreButton = $("<button>More Detail</button>");
