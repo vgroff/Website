@@ -56,6 +56,7 @@ centralPlanningGame.buttonUnhide = function(div, button) {
 	}
 }
 
+
 // OBSELETE
 centralPlanningGame.defaultProp = function(prop, props) {
 	if (props[prop] === null) {

@@ -30,7 +30,7 @@ centralPlanningGame.Production = function(title, dateBuilt, size, inputs, produc
 	}
 	this.maxAvailableJobs = maxNumberWorkers; // For now at least.
 	this.availableJobs = maxNumberWorkers;
-	this.worker
+	//this.worker
 	this.baseJobQuality = baseJobQuality;
 	this.jobQuality = baseJobQuality;
 	this.numberWorkers = 0;
@@ -52,26 +52,28 @@ centralPlanningGame.Production.prototype.produce = function()
 	var totalProduced = productionPerWorker*this.numberWorkers;
 	var prod = new this.product();
 	if (this.inputs) {
-		console.log(this.inputStorage);
+		//console.log(this.inputStorage);
 		var inputsUsed = 0;
 		var finalProduction = 0;
 		var produced = 0;
 		for (var inputIndex in this.inputs) {
 			var inputMultiplier = this.inputs[inputIndex][1];
 			var inputNum = this.inputStorage[inputIndex];
+			// If there is more than enough input
 			if (inputNum > totalProduced - produced) {
 				produced = totalProduced;
-				finalProduction += inputNum * inputMultiplier;
+				finalProduction += produced * inputMultiplier;
 				this.inputStorage[inputIndex] -= totalProduced;
 				break;
 			}
+			// If there is not enough input
 			else {
 				produced += inputNum;
 				finalProduction += inputNum * inputMultiplier;
 				this.inputStorage[inputIndex] = 0;
 			}
 		}
-		console.log(this.inputStorage);
+		//console.log(this.inputStorage);
 	}
 	else {
 		finalProduction = totalProduced;
@@ -124,7 +126,7 @@ centralPlanningGame.Production.prototype.getProductionPerWorker = function(numbe
 {
 	if (this.optimumNumberWorkers) {
 		if (numberWorkers > 0) {
-			return this.productionPerWorker*(0.2 + 0.8*(numberWorkers/this.optimumNumberWorkers)**1.6 );
+			return this.productionPerWorker*(0.1 + 0.9*(numberWorkers/this.optimumNumberWorkers)**1.6 );
 		}
 		else {
 			return 0;
@@ -141,21 +143,32 @@ centralPlanningGame.Production.prototype.getOptimumWage = function(settlement)
 		var prod = new this.product();
 		var outputPrice = settlement.reserves[prod.type][prod.title].privatePrice;
 		var costs = 0;
-		var numWork = this.numberWorkers;
 		if (this.inputs) {
-			this.numberWorkers = this.maxNumberWorkers;
-			costs += this.buyInputs(settlement, false, true);
+			var numWork = this.numberWorkers;
+			this.numberWorkers = this.maxAvailableJobs;
+			inputs = this.buyInputs(settlement, false, true);
+			//console.log("Bakery costs " + inputs[0]/this.numberWorkers + " income " + inputs[1]*outputPrice/this.numberWorkers + " production " + inputs[1] + " price " + outputPrice);
+			if (inputs[1] == 0) {
+				this.numberWorkers = numWork;
+				return 0;
+			}
+			else {
+				costs += inputs[0];
+			}
+			var optimumWage = (inputs[1]*outputPrice - costs)/this.numberWorkers;
+			this.numberWorkers = numWork;
+			return optimumWage;
 		}
-		var optimumWage = this.productionPerWorker*outputPrice - costs/this.numberWorkers;
-		this.numberWorkers = numWork;
-		return optimumWage;
+		else {
+			return this.productionPerWorker*outputPrice;
+		}
 	}
 	else {
 		return this.wage;
 	}
 };
 
-centralPlanningGame.Production.prototype.buyInputs = function(settlement, reallyBuy, returnCost) {
+centralPlanningGame.Production.prototype.buyInputs = function(settlement, reallyBuy, more) {
 	// Now, need outputPrice*production*multiplier - inputPrice*production > wage*numberWorkers, multiplier - inputPrice/outputPrice > wage*numWorkers/outputPrice
 	// Now a higher multiplier produces
 	if (this.inputs) {
@@ -171,7 +184,6 @@ centralPlanningGame.Production.prototype.buyInputs = function(settlement, really
 		else {
 			var outputPrice = settlement.reserves[prod.type][prod.title].privatePrice;
 		}
-		// I FUCKED THIS ALL UP WITH THE WRONG MULTIPLIER!!!!!!!!!! MULTIPLIER TELLS US HOW MUCH EXTRA IS PRODUCED FROM WHAT IS LOOKED AT
 		for (var inputIndex = 0; inputIndex < this.inputs.length; inputIndex++) {
 			var inputArr = this.inputs[inputIndex];
 			var input = new inputArr[0]();
@@ -189,9 +201,10 @@ centralPlanningGame.Production.prototype.buyInputs = function(settlement, really
 			b["ratio"] - a["ratio"]; // A higher ratio is better
 		});
 		var produced = 0; 
+		var finalProd = 0;
 		var cost = 0;
 		// Cycle over the inputs, buying enough to cover production
-		for (var inputIndex = 0; inputIndex < this.inputs.length; inputIndex++) {
+		for (var inputIndex = 0; inputIndex < inputs.length; inputIndex++) {
 			// If there is left over production (more stuff to be made)
 			var leftOver = totalProduced - produced;
 			if (leftOver < 0.0001) {
@@ -201,21 +214,24 @@ centralPlanningGame.Production.prototype.buyInputs = function(settlement, really
 				var obj = inputs[inputIndex];
 				var input = obj["input"];
 				var multiplier = obj["multiplier"];
-				var storage = this.inputStorage[obj["inputIndex"]];
-				console.log(leftOver/multiplier, storage);
-				// THIS SHIT IS WRONG!!!!!!!!!!!!!!!
+				if (more) {
+					storage = 0;
+				}
+				else {
+					var storage = this.inputStorage[obj["inputIndex"]];
+				}
+				//console.log(leftOver/multiplier, storage);
 				if (leftOver - storage > 0) { // If there is not enough in storage
 					leftOver -= storage;
 					produced += storage;
-					var bought = settlement.buyCheapestAmountIndustry(input, leftOver/multiplier, 1e99);
+					var bought = settlement.buyCheapestAmountIndustry(input, leftOver, 1e99);
 					produced += (bought[0] + bought[1]);
+					finalProd += (bought[0] + bought[1])*multiplier;
 					var reserve = settlement.reserves[input.type][input.title];
 					if (reallyBuy) {
 						reserve.stateOwned -= bought[0];
 						reserve.privateOwned -= bought[1];
-						console.log(this.inputStorage);
 						this.inputStorage[obj["inputIndex"]] += bought[0]+bought[1];
-						console.log(this.inputStorage);
 					}
 					cost += bought[2];
 					obj["excessDemand"] = leftOver/multiplier - (bought[0]+bought[1]);
@@ -231,8 +247,8 @@ centralPlanningGame.Production.prototype.buyInputs = function(settlement, really
 			this.totalExpenses += cost;
 		}
 		this.numberWorkers = numberWorkers;
-		if (returnCost === true) {
-			return cost;
+		if (more === true) {
+			return [cost, finalProd, inputs];
 		}
 		else {
 			return inputs;
@@ -346,7 +362,7 @@ centralPlanningGame.WoodCollectors.prototype.constructor = centralPlanningGame.W
 // need x farm products BasicBakery production, so prod per worker*numworkers gives total prod, so would need 
 centralPlanningGame.BasicBakery = function(dateBuilt) 
 {																			// Products and multiplier (i.e. 1 farm produce makes 1.1 pieces of bread)
-	centralPlanningGame.Production.call(this, "Basic Bakery", dateBuilt, 10, [ [centralPlanningGame.FarmProduce, 1.1] ], centralPlanningGame.Bread, null, 2, 0, 0.15, 
+	centralPlanningGame.Production.call(this, "Basic Bakery", dateBuilt, 10, [ [centralPlanningGame.FarmProduce, 1.1] ], centralPlanningGame.Bread, null, 4, 0, 0.15, 
 										10, true, "workers", 0);
 	this.availableJobs = 10;
 	this.maxAvailableJobs = 10;

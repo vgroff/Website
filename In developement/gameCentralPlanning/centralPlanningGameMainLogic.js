@@ -24,7 +24,7 @@ centralPlanningGame.mainLogic = function() {
 	this.addSettlement("Leningrad", [100,100]);
 	demoSettlement = this.settlements[0];
 	//demoSettlement.population = 160;
-	demoSettlement.population = 40;
+	demoSettlement.population = 130;
 	var bread = new centralPlanningGame.Bread();
 	var farmProduce = new centralPlanningGame.FarmProduce();
 	var processedFoods = new centralPlanningGame.ProcessedFoods();
@@ -34,16 +34,16 @@ centralPlanningGame.mainLogic = function() {
 	//farmProduce.privateOwned = 100;
 	demoSettlement.addToReserves( farmProduce );
 	demoSettlement.reserves["Food"]["Farm Produce"].privatePrice = 10;
-	demoSettlement.reserves["Food"]["Farm Produce"].privateOwned = 450;
+	demoSettlement.reserves["Food"]["Farm Produce"].privateOwned = demoSettlement.population*30;
 	demoSettlement.reserves["Food"]["Bread"].privatePrice = 14;
-	demoSettlement.reserves["Food"]["Bread"].privateOwned = 450;
+	demoSettlement.reserves["Food"]["Bread"].privateOwned = demoSettlement.population*30;
 	demoSettlement.reserves["Food"]["Animal Produce"].privatePrice = 25;
-	demoSettlement.reserves["Food"]["Animal Produce"].privateOwned = 450;
+	demoSettlement.reserves["Food"]["Animal Produce"].privateOwned = demoSettlement.population*30;
 	//demoSettlement.happinessFactors["Food"].getSpending(10);
-	demoSettlement.overallHappiness.getSpending(10, true);
+	//demoSettlement.overallHappiness.getSpending(10, true);
 	var district = new centralPlanningGame.District("Town Center", 150);
 	demoSettlement.addDistrict(district);
-	var nStripFarms = 2;
+	var nStripFarms = 4;
 	for (var i=0; i < nStripFarms; i++) {
 		var stripFarm = new centralPlanningGame.StripFarms(this.date);
 		stripFarm.numberWorkers = 10;
@@ -52,23 +52,17 @@ centralPlanningGame.mainLogic = function() {
 	var nBakeries = 2;
 	for (var i=0; i < nBakeries; i++) {
 		var bakery = new centralPlanningGame.BasicBakery(this.date);
-		bakery.numberWorkers = 5;
+		bakery.numberWorkers = 10;
 		demoSettlement.addBuilding(district, bakery);
 	}
 	var district2 = new centralPlanningGame.District("District 1", 150);
 	demoSettlement.addDistrict(district2);
-	//~ var nStripFarms = 2;
-	//~ for (var i=0; i < nStripFarms; i++) {
-		//~ var stripFarm = new centralPlanningGame.StripFarms(this.date);
-		//~ stripFarm.numberWorkers = 20;
-		//~ demoSettlement.addBuilding(district2, stripFarm);
-	//~ }
-	var smallCoop = new centralPlanningGame.HuntingCabin(this.date);
-	smallCoop.numberWorkers = 5;
-	demoSettlement.addBuilding(district2, smallCoop);
-	var smallCoop = new centralPlanningGame.HuntingCabin(this.date);
-	smallCoop.numberWorkers = 0;
-	demoSettlement.addBuilding(district2, smallCoop);
+	var nCabins = 6;
+	for (var i=0; i < nCabins; i++) {
+		var cabin = new centralPlanningGame.HuntingCabin(this.date);
+		cabin.numberWorkers = 10;
+		demoSettlement.addBuilding(district2, cabin);
+	}
 	//demoSettlement.addBuilding(district, gatheringHut);
 	this.buildGUI();
 	this.updateDaily();
@@ -107,19 +101,6 @@ centralPlanningGame.mainLogic.prototype.updateDaily = function(guiUpdate) {
 	var newDate = new Date(this.date);
 	newDate.setDate(newDate.getDate() + 1);
 	this.date = newDate;	
-	// The penalty can be altered by better roads and transport companies etc... But essentially it would need to translate to man hours which would be speed/km.
-	// For now, every new settlement has a coordinate system and is connected to our settlements via a straight-line dirt track.
-	// ORDER 3:
-	// - Local trader takes all local produce at privatePrice using current numberOfWorkers etc... 
-	// - Local populace buys locally from trader and trader pays the money back to the private industry. Assuming locals already sorted by wage?
-	// - Local industry buys it's inputs locally from trader, or tries to and if it can't, adds to an extra demand number. Also need to give money back to private industry here.
-	// - Prices re-calculated? Compare with same reserves yesterday, and consider the extra demand?
-	// - Settlements traders trade any surplus reserves between each other - i.e. any daily surplus is sold to places with higher prices, while counting delivery costs. How is this done in practice? Need the delivery peeps but possibly can be done later? Wages calculated such that we break even? Could just be an industry that produces "delivery hours". Could re-calculate (both) local prices after each trade?
-	// - Prices re-calculated?
-	// - All entrepreneurs MAKE THE SAME WAGE (for now). They pay themselves from the wealth, making sure they have enough that it keeps growing?
-	// If we have traders buying all, what do we do about state prices? e.g. when does the money hit the state coffers? Still want it to keep up with money supply, so perhaps when just when the trader buys.
-	// But what if no one is buying the stuff? Could there be an upper limit on reserves
-	// STATE PRICES:Instead of fixing a state price, could offer subsidies to consumers. OR allow state price to drop from a baseStatePrice, but not increase!!! i.e. can fix a MAXIMUM state price.
 	var inflationTotal = 0;
 	var totalProduced  = 0;
 	for (var i=0; i < this.settlements.length; i++) {

@@ -80,7 +80,10 @@ centralPlanningGame.SettlementOverviewGui = function(settlement) {
 	this.guiHTML = template({"settlement":settlement, "that":this});
 	this.divJ = $("<div class=\"centralGui\"> </div>");
 	this.divJ.addClass(this.type);
-	this.divJ.append(this.guiHTML)
+	this.divJ.append(this.guiHTML);
+	var resourcesButton = $("<button>Show Resources</button>");
+	resourcesButton.on("click", function() {new centralPlanningGame.SettlementResourcesGui(settlement);} );
+	this.divJ.append(resourcesButton);
 };
 
 centralPlanningGame.SettlementHappinessGui = function(settlement) {
@@ -168,6 +171,7 @@ centralPlanningGame.SettlementHappinessGui = function(settlement) {
 	}
 };
 
+
 centralPlanningGame.SettlementBuildingsGUI = function(settlement) {
 	this.type = "buildings";
 	this.divJ = $("<div class=\"centralGui hidden\"> </div>");
@@ -223,7 +227,7 @@ centralPlanningGame.BuildingGUI = function(building) {
 	var coord = [0,0];
 	var size = [250, 400];
 	centralPlanningGame.Gui.call(this, container, coord, size, true, {});
-	console.log(building, building.maxAvailableJobs);
+	//console.log(building, building.maxAvailableJobs);
 	var guiTemplate = _.template(
 	"<h3 class=\"centralGui\"><%= building.title %></h3>\
 	<p class=\"centralGui\">Available Jobs: <%= building.availableJobs %>/<%= building.maxAvailableJobs %></p>\
@@ -240,6 +244,31 @@ centralPlanningGame.BuildingGUI = function(building) {
 centralPlanningGame.BuildingGUI.prototype = Object.create(centralPlanningGame.Gui.prototype);
 // correct the constructor pointer
 centralPlanningGame.BuildingGUI.prototype.constructor = centralPlanningGame.BuildingGUI;
+
+
+centralPlanningGame.SettlementResourcesGui = function(settlement) {
+	this.type = "resources";
+	container = centralPlanningGame.stage;
+	var coord = [0,0];
+	var size = [250, 400];
+	centralPlanningGame.Gui.call(this, container, coord, size, true, {});
+	this.divJ.addClass(this.type);
+	var heading = $("<h3>Resources</h3>");
+	this.divJ.append(heading);
+	for (var reserveType in settlements.reserves) {
+		for (var reserveTitle in settlement.reserves[reserveType] {
+			var product = settlement.reserves[reserveType][reserveTitle];
+		}
+	}
+	var closeButton = $("<button>Close</button>");
+	closeButton.on("click",function() {this.parentContainer.removeChild(this.container);this.divH.parentNode.removeChild(this.divH);}.bind(this));
+	this.divJ.append(closeButton);
+}
+
+centralPlanningGame.SettlementResourcesGui.prototype = Object.create(centralPlanningGame.Gui.prototype);
+// correct the constructor pointer
+centralPlanningGame.SettlementResourcesGui.prototype.constructor = centralPlanningGame.SettlementResourcesGui;
+
 
 // Hapinness GUI details:
 

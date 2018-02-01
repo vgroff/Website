@@ -62,7 +62,7 @@
 // Do job distribution now. Have workers consider actual (long-term) happiness in a certain workplace as well as theoretical happiness they could get (from theoretically produced wage on daily basis). 
 
 centralPlanningGame.Settlement = function(name, coordinates) {
-	this.log = true;
+	this.log = false;
 	this.name = name;
 	this.daysExisted = 0;
 	this.population = 0;
@@ -111,12 +111,13 @@ centralPlanningGame.Settlement = function(name, coordinates) {
 };
 
 centralPlanningGame.Settlement.prototype.updatePrices = function() {
-	var optVal = this.population*5;
-	var changeRange = this.population * 2;
+	this.log = false;
+	var optVal = this.population*30;
+	var changeRange = this.population * 6;
 	var minOptVal = optVal - changeRange;
 	var maxOptVal = optVal + changeRange;
 	var minChange = 0.001;
-	var maxChange = 0.03;
+	var maxChange = 0.025;
 	var marketReactivity = 0.2;
 	var toleranceRange = 0.01;
 	console.log("\nNewDay");
@@ -250,19 +251,23 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 			product.dailyExcessDemand = 0;
 		}
 	}
-	// To make the changes both more realistic and more gradual, only 5% of the workforce changes job each turn.
-	// These guys are pooled together, and then they cycle over the settlement.wageLevels (previous turns wages) and fill those jobs in.
-	// We need to know the total number of unemployed when we start, maybe we do this the turn before. Then we go over the wage array backwards and count the population as we go to correct for errors.
-	// If I have a business with spare jobs, keep it in an array. Then sort the array by wage. Then consider the unemployed, then go along the bottom of wageLevel companies, and do the thing from before.
-	this.businessesEmploying.sort( function(a,b) {
-		return b.getOptimumWage(settlement)-a.getOptimumWage(settlement);
+	this.businessesEmploying.sort( function(b,a) {
+		return 0.9*b.getOptimumWage(settlement) + 0.9*b.wage - 0.9*a.getOptimumWage(settlement) - 0.9*a.wage;
 	});
-	//console.log(this.businessesEmploying);
+	// Seems to be working sort of ok now (minus inflation)
+	// 1. Savings aren't working (not being carried over), fix that
+	// 2. Need to have a GUI to inspect the economy with. Possibly graphs too
+	console.log(this.businessesEmploying);
 	if (settlement.availableJobs > 0) {
 		if (settlement.wageLevelsArr[0]["businesses"]) {
 			var wageIndex = 0;
-			var unemployed = settlement.wageLevelsArr[0]["unemployed"];
-			var noIncome = settlement.wageLevelsArr[0]["pop"] - unemployed;
+			if (settlement.wageLevelsArr[0]["unemployed"]) {
+				var unemployed = settlement.wageLevelsArr[0]["unemployed"];
+				var noIncome = settlement.wageLevelsArr[0]["pop"] - unemployed;
+			}
+			else {
+				unemployed = 0;
+			}
 		}
 		else {
 			var unemployed = settlement.wageLevelsArr[0]["pop"];
@@ -274,10 +279,12 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 		for (var bussIndex = 0; bussIndex < settlement.businessesEmploying.length; bussIndex++ ) {
 			var business = settlement.businessesEmploying[bussIndex];
 			var vacancies = business.availableJobs - business.numberWorkers;
+			//console.log("Trying to fill " + vacancies + " vacancies at " + business.title);
 			if (unemployed >= vacancies) {
 				unemployed -= vacancies;
 				business.numberWorkers = business.availableJobs;
 				vacancies = 0;
+				//console.log(business.title + " vacancies filled with unemployed");
 			}
 			else {
 				vacancies -= unemployed;
@@ -285,12 +292,26 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 				unemployed = 0;
 				while (vacancies > 0) { 
 					var business2 = settlement.wageLevelsArr[wageIndex]["businesses"][bussIndex2];
-					if (business.getOptimumWage(settlement) < business2.getOptimumWage(settlement)) { // If wage is smaller at the new place, forget about it.
-						done = true;
+					if (business === business2) {
+						bussIndex2++;
+						if (bussIndex2 >= settlement.wageLevelsArr[wageIndex]["businesses"].length) {
+							wageIndex++;
+							bussIndex2 = 0;
+							if (wageIndex >= settlement.wageLevelsArr.length) {
+								done = true;
+								break;
+							}
+						}
+						continue;
+					}
+					wage1 = 0.9*business.getOptimumWage(settlement) + 0.1*business.wage;
+					wage2 = 0.9*business2.getOptimumWage(settlement) + 0.1*business2.wage;
+					if ( wage2 - wage1 > 0.001 ) { // If the wage at the business2 is larger break
+						//console.log("Wage at " + business.title + " is too small, no workers will come from " + business2.title + ": " + wage1 + " " + wage2);
 						break;
 					}
-					else {
-						var arr = [business2.numberWorkers*0.1, business2.availableJobs*0.05];
+					else if ( wage2 - wage1 < 0.001 || (business2.numberWorkers <= business.numberWorkers) ){ // If wage is larger at new place or they have more workers
+						var arr = [Math.floor(business2.numberWorkers*0.1), Math.floor(business2.availableJobs*0.05)];
 						var waveringEmployees = 2;
 						for (var arrIndex = 0; arrIndex < arr.length; arrIndex++) {
 							if (arr[arrIndex] > waveringEmployees) {
@@ -304,20 +325,27 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 							business2.numberWorkers -= vacancies;
 							business.numberWorkers = business.availableJobs;
 							vacancies = 0;
+							//console.log("All vacancies at " + business.title + " have been filled by workers from " + business2.title);
 						}
 						else {
 							vacancies -= waveringEmployees;
 							business2.numberWorkers -= waveringEmployees;
 							business.numberWorkers += waveringEmployees;
+							//console.log(waveringEmployees + " employees have moved from " + business2.title + " to " + business.title);
 							bussIndex2++;
 							if (bussIndex2 >= settlement.wageLevelsArr[wageIndex]["businesses"].length) {
-								done = true;
-								break;
+								wageIndex++;
+								bussIndex2 = 0;
+								if (wageIndex >= settlement.wageLevelsArr.length) {
+									done = true;
+									break;
+								}
 							}
 						}
 					}
 				}
 			}
+			//console.log(business.title, business.numberWorkers);
 			if (done === true) {
 				break;
 			}
@@ -337,7 +365,6 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 		// Cycle over individual businesses, sell stuff and pay out wages, then calculate wage levels and income gaps
 		for (businessIndex in industry["buildings"]) {
 			var business = industry["buildings"][businessIndex];
-			console.log(business.title + " has " + business.numberWorkers + " workers");
 			//business.dailyIncome = 0;
 			unemployed -= business.numberWorkers;
 			var freeJobs = business.availableJobs - business.numberWorkers;
@@ -363,6 +390,7 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 			business.totalIncome += income;
 			business.dailyIncome = income;
 			var wage = business.getWage(business.totalIncome - business.totalExpenses, this.averageWage);
+			//console.log(business.title + " has " + business.numberWorkers + " workers producing" + product.privateOwned+ " with profit " + (business.totalIncome - business.totalExpenses) + " and wage " + business.wage );
 			if (wage < 0.0001) {
 				settlement.unpaidWorkers += business.numberWorkers;
 			}
@@ -396,7 +424,7 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 		settlement.wageLevels["0"]["popDummy"] += unemployed;
 		settlement.wageLevels["0"]["unemployed"] = unemployed;
 	}
-	else {
+	else if (unemployed > 0) {
 		settlement.wageLevels["0"] = {"wage": 0, "pop": unemployed, "popDummy": unemployed, "savings":0 };
 	}
 	var wageArr = [];
@@ -421,10 +449,12 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 			}
 			// else, do proportionally
 			else {
-				var ratio = wageArr[wageIndex]["popDummy"] / pop;
-				wageArr[wageIndex]["savings"] += savings * ratio;
-				pop -= wageArr[wageIndex]["popDummy"];
-				savings -= savings*ratio;
+				if (pop > 0) {
+					var ratio = wageArr[wageIndex]["popDummy"] / pop;
+					wageArr[wageIndex]["savings"] += savings * ratio;
+					pop -= wageArr[wageIndex]["popDummy"];
+					savings -= savings*ratio;
+				}
 				wageIndex--;
 			}
 			if (wageIndex < 0) {
@@ -432,7 +462,7 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 			}
 		}
 	}
-	console.log(wageArr);
+	//console.log(wageArr);
 	//console.log(settlement.reserves["Food"]["Farm Produce"].privateOwned);
 	var originalPopulation = settlement.population;
 	settlement.averageWageDaily = 0;
@@ -443,8 +473,14 @@ centralPlanningGame.Settlement.prototype.updateDaily = function(log) {
 		// Given that wageLevels is in ascending order, we get maxHappiness spending, remove the amount needed from the reserves, pay the industry and update the population left.
 		var wage = wageArr[wageIndex]["wage"];
 		var wagePop = wageArr[wageIndex]["pop"];
-		var savings = wageArr[wageIndex]["savings"]/wagePop;
+		if (wagePop > 0) {
+			var savings = wageArr[wageIndex]["savings"]/wagePop;
+		}
+		else {
+			var savings = 0;
+		}
 		var income = wage+savings;
+		console.log(wage, savings);
 		settlement.averageWageDaily += wage*wagePop/originalPopulation;
 		var spending = settlement.overallHappiness.getSpending(wage+savings, true); 
 		var moneySaved = 0;

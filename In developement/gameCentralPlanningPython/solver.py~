@@ -1,0 +1,13 @@
+
+def findMax(f, start, end, stepSize, minChange):
+    x = start
+    y = f(x)
+    grad = 1
+    x += stepSize
+    y2 = f(x)
+    grad = (y - y2) / 
+    while(True):
+        y = f(x)
+        grad = (y - y2) / (grad*stepSize)
+        y2 = y
+        x += grad*stepSize
